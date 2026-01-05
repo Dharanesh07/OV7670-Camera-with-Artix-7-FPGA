@@ -2,8 +2,8 @@
 
 module sdram_tb ();
 
-  parameter DURATION = 1000000;
-  parameter CLK_PERIOD = 10;  // 10ns = 100MHz
+  parameter DURATION = 1000;
+  parameter CLK_PERIOD_NS = 0.1941;  // 10ns = 100MHz
 
   parameter SDRAM_CLK_FREQ_MHZ = 100;
   parameter TRP_NS = 20;
@@ -23,7 +23,7 @@ module sdram_tb ();
   wire        tb_sdram_clk;
   wire        tb_sdram_cke;
   wire [ 1:0] tb_sdram_dqm;
-  wire [11:0] tb_sdram_addr;
+  wire [12:0] tb_sdram_addr;
   wire [ 1:0] tb_sdram_ba;
   wire        tb_sdram_csn;
   wire        tb_sdram_wen;
@@ -44,7 +44,6 @@ module sdram_tb ();
       .i_rstn    (o_rstn),
       .i_addr    (o_addr),
       .i_datain  (o_datain),
-      .i_wmask   (o_wrmask),
       .i_rw_en   (o_rw_en),
       .o_dataout (i_dataout),
       .o_ready   (i_ready),
@@ -62,10 +61,22 @@ module sdram_tb ();
 
 
 
+  mt48lc16m16a2 sim_model (
+      .Dq   (tb_sdram_data),
+      .Addr (tb_sdram_addr),
+      .Ba   (tb_sdram_ba),
+      .Clk  (tb_sdram_clk),
+      .Cke  (tb_sdram_cke),
+      .Cs_n (tb_sdram_csn),
+      .Ras_n(tb_sdram_rasn),
+      .Cas_n(tb_sdram_casn),
+      .We_n (tb_sdram_wen),
+      .Dqm  (tb_sdram_dqm)
+  );
 
   initial begin
     r_clk = 0;
-    forever #(CLK_PERIOD / 2) r_clk = ~r_clk;
+    forever #(CLK_PERIOD_NS / 2) r_clk = ~r_clk;
   end
 
   initial begin
@@ -89,7 +100,6 @@ module sdram_tb ();
     #(DURATION);  // Duration for simulation
     $finish;
   end
-
 
 endmodule
 

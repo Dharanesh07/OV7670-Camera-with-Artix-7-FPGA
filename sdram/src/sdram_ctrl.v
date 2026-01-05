@@ -24,14 +24,13 @@ module sdram_ctrl #(
     input             i_rstn,
     input      [22:0] i_addr,
     input      [31:0] i_datain,
-    input      [ 3:0] i_wmask,
     input             i_rw_en,
     output reg [31:0] o_dataout,
     output reg        o_ready,
     output            sdram_clk,
     output            sdram_cke,
     output     [ 1:0] sdram_dqm,
-    output     [11:0] sdram_addr,  //row/col address
+    output     [12:0] sdram_addr,  //row/col address
     output     [ 1:0] sdram_ba,    //bank address
     output            sdram_csn,   //command
     output            sdram_wen,   //command

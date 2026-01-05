@@ -17,7 +17,8 @@ SIM_SNAPSHOT	= sim_snapshot
 SIM_DIR 		= sim_output
 STATE_FILE      = waveform.surf.ron 
 SIM_FILES      = $(SRC_DIR)/sdram_ctrl.v \
-				 $(TB_DIR)/sdram_tb.v
+				 $(TB_DIR)/sdram_tb.v \
+				 $(TB_DIR)/mt48lc16m16a2.v
 SIM_EXEC	= $(SIM_DIR)/$(SIM)_tb.vvp
 VCD_FILE	= $(SIM_DIR)/$(SIM)_tb.vcd
 
