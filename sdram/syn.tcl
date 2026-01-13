@@ -9,11 +9,21 @@ proc compile {top src_dir output_dir device} {
     
     # Change to source directory
     set original_dir [pwd]
-    cd $src_dir
+    
+    # IP
+    set_part $device
+    
+    read_ip ip/ila_0/ila_0.xci
+    upgrade_ip [get_ips]
+    generate_target all [get_ips]
+    # synthesize if already not synthesized
+    synth_ip [get_ips]
 
     link_design -part $device
+    cd $src_dir
     
-       
+
+
     # Compile any .sv, .v, and .vhd files that exist in the current directory
     if {[glob -nocomplain *.sv] != ""} {
         puts "Reading SV files..."
@@ -37,32 +47,10 @@ proc compile {top src_dir output_dir device} {
         puts "Warning: pins.xdc not found"
     }
 
-    puts "Reading IP files..."
-    cd $original_dir
-
-    # Read the IP synthesis checkpoint (DCP file)
-    set ip_dcp "ip/clk_wiz_0/clk_wiz_0.dcp"
-    if {[file exists $ip_dcp]} {
-        puts "Reading IP checkpoint: $ip_dcp"
-        #read_checkpoint -cell clk_wiz_inst $ip_dcp
-        read_checkpoint $ip_dcp
-        set_property SCOPED_TO_CELLS {clk_wiz_inst} [get_files $ip_dcp]
-    } else {
-        puts "ERROR: IP DCP file not found at $ip_dcp"
-        puts "Please run: vivado -mode batch -source fix_ip.tcl"
-        set ip_stub "ip/clk_wiz_0/clk_wiz_0_stub.v"
-        if {[file exists $ip_stub]} {
-            read_verilog $ip_stub
-            puts "Using IP stub file (IP will be synthesized as black box)"
-        } else {
-            puts "ERROR: Neither DCP nor stub file found!"
-            puts "Please regenerate IP with: vivado -mode batch -source create_clk_ip.tcl"
-            exit 1
-        }
-    }
-    
     cd $original_dir
     # Change to output directory for all output files
+
+
     cd $output_dir
     
     puts "Synthesizing design..."
@@ -81,6 +69,10 @@ proc compile {top src_dir output_dir device} {
     
     puts "Routing Design..."
     route_design
+
+    puts "Setting up debug cores..."
+    set debug_file "${top}_debug_nets.ltx"
+    write_debug_probes -force $debug_file 
 
     puts "Writing checkpoint"
     write_checkpoint -force $top.dcp

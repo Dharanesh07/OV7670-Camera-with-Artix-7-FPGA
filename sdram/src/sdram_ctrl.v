@@ -1,3 +1,4 @@
+`timescale 1ns / 1ps
 /*
 P/N: W9825G6KH
 
@@ -12,6 +13,12 @@ P/N: W9825G6KH
 //TRCD_NS - Minimum Active to Read/Write Command Delay
 //TCH_NS - Clock high level width
 
+// Row address: 14:2
+// Bank address: 1:0
+// Column address: Not required since we are accessing the entire page of 512
+// words
+
+
 module sdram_ctrl #(
     parameter SDRAM_CLK_FREQ_MHZ = 64,
     parameter TRP_NS             = 20,
@@ -22,11 +29,14 @@ module sdram_ctrl #(
 ) (
     input             i_clk,
     input             i_rstn,
-    input      [22:0] i_addr,
-    input      [31:0] i_datain,
-    input             i_rw_en,
-    output reg [31:0] o_dataout,
-    output reg        o_ready,
+    input      [14:0] i_addr,      //Input address
+    input      [15:0] i_datain,    //SDRAM input data to write
+    input             i_rw,        //Read -1, Write-0
+    input             i_sdram_en,  //Enabled for SDRAM read or write operation
+    output reg [15:0] o_dataout,   //Output from SDRAM
+    output reg        o_dataval,   //Indicates valid data
+    output reg        is_writing,  // Indicates write operation
+    output reg        o_ready,     //Indicates SDRAM has completed initialization
     output            sdram_clk,
     output            sdram_cke,
     output     [ 1:0] sdram_dqm,
@@ -39,6 +49,8 @@ module sdram_ctrl #(
     inout      [15:0] sdram_data
 );
 
+
+  localparam REFRESH_COUNT_VAL = 1037;  // 7.8uS refresh cycle
   // For 50MHz clk freq
   // one clk period = 1/50MHz
   // 1 uS = 1/(1/50) = 50 clks  
@@ -75,6 +87,10 @@ module sdram_ctrl #(
 
   reg        clk_en;
   reg        clk_en_nxt;
+  reg        en;
+  reg        en_nxt;
+  reg        rw_nxt;
+  reg        rw;
   reg [ 3:0] cmd;
   reg [ 3:0] cmd_nxt;
   reg        dqm;
@@ -83,16 +99,20 @@ module sdram_ctrl #(
   reg [ 1:0] bank_addr_nxt;
   reg [15:0] data;
   reg [15:0] data_nxt;
-  reg [11:0] addr;
-  reg [11:0] addr_nxt;
-  reg        en;
-  reg        en_nxt;
-  reg [31:0] o_dataout_nxt;
+  reg [12:0] addr;
+  reg [12:0] addr_nxt;
+  reg        tristate_en;
+  reg        tristate_en_nxt;
   reg        o_ready_nxt;
+  reg [15:0] o_dataout_nxt;
+  reg        o_dataval_nxt;
+  reg [10:0] refresh_count;
+  reg [10:0] refresh_count_nxt;
   reg        refresh_flag;
   reg        refresh_flag_nxt;
   reg [ 9:0] burst_index;
   reg [ 9:0] burst_index_nxt;
+  reg        is_writing_nxt;
 
   //States
   localparam START = 0;
@@ -102,12 +122,13 @@ module sdram_ctrl #(
   localparam INIT_AUTO_REFRESH1 = 4;
   localparam INIT_LOAD_MODE = 5;
   localparam IDLE = 6;
-  localparam READ = 7;
-  localparam READ_DATA = 8;
-  localparam WRITE = 9;
-  localparam WRITE_BURST_DATA = 10;
-  localparam WAIT_STATE = 11;
-  localparam LAST_STATE = 12;
+  localparam REFRESH = 7;
+  localparam READ = 8;
+  localparam READ_BURST_DATA = 9;
+  localparam WRITE = 10;
+  localparam WRITE_BURST_DATA = 11;
+  localparam WAIT_STATE = 12;
+  localparam LAST_STATE = 13;
 
   localparam STATE_WIDTH = $clog2(LAST_STATE);
   localparam WAIT_STATE_WIDTH = $clog2(WAIT_100US);
@@ -126,59 +147,82 @@ module sdram_ctrl #(
 
   always @(posedge i_clk) begin
     if (~i_rstn) begin
-      state        <= START;
-      ret_state    <= START;
-      cmd          <= CMD_NOP;
-      wait_states  <= 0;
-      o_ready      <= 1'b0;
-      o_dataout    <= 0;
-      en           <= 1'b0;
-      data         <= 0;
-      dqm          <= 2'b11;
-      bank_addr    <= 2'b11;
-      addr         <= 0;
-      refresh_flag <= 1'b0;
-      burst_index  <= 0;
+      state         <= START;
+      ret_state     <= START;
+      cmd           <= CMD_NOP;
+      wait_states   <= 0;
+      o_dataval     <= 1'b0;
+      o_ready       <= 1'b0;
+      o_dataout     <= 0;
+      tristate_en   <= 1'b0;
+      data          <= 0;
+      dqm           <= 2'b00;
+      bank_addr     <= 2'b00;
+      addr          <= 0;
+      refresh_flag  <= 1'b0;
+      refresh_count <= 0;
+      burst_index   <= 0;
+      en            <= 1'b0;
+      rw            <= 1'b0;
+      is_writing    <= 1'b0;
     end else begin
-      data         <= data_nxt;
-      o_dataout    <= o_dataout_nxt;
-      state        <= state_nxt;
-      o_ready      <= o_ready_nxt;
-      clk_en       <= clk_en_nxt;
-      dqm          <= dqm_nxt;
-      cmd          <= cmd_nxt;
-      wait_states  <= wait_states_nxt;
-      ret_state    <= ret_state_nxt;
-      bank_addr    <= bank_addr_nxt;
-      addr         <= addr_nxt;
-      en           <= en_nxt;
-      refresh_flag <= refresh_flag_nxt;
-      burst_index  <= burst_index_nxt;
+      data          <= data_nxt;
+      o_dataout     <= o_dataout_nxt;
+      state         <= state_nxt;
+      o_dataval     <= o_dataval_nxt;
+      o_ready       <= o_ready_nxt;
+      clk_en        <= clk_en_nxt;
+      dqm           <= dqm_nxt;
+      cmd           <= cmd_nxt;
+      wait_states   <= wait_states_nxt;
+      ret_state     <= ret_state_nxt;
+      bank_addr     <= bank_addr_nxt;
+      addr          <= addr_nxt;
+      tristate_en   <= tristate_en_nxt;
+      refresh_flag  <= refresh_flag_nxt;
+      refresh_count <= refresh_count_nxt;
+      burst_index   <= burst_index_nxt;
+      rw            <= rw_nxt;
+      en            <= en_nxt;
+      is_writing    <= is_writing_nxt;
     end
   end
 
 
   always @(*) begin
-    wait_states_nxt  = wait_states;
-    state_nxt        = state;
-    cmd_nxt          = CMD_NOP;
-    o_ready_nxt      = o_ready;
-    clk_en_nxt       = clk_en;
-    dqm_nxt          = dqm;
-    cmd_nxt          = cmd;
-    ret_state_nxt    = ret_state;
-    bank_addr_nxt    = bank_addr;
-    addr_nxt         = addr;
-    dqm_nxt          = dqm;
-    cmd_nxt          = cmd;
-    en_nxt           = en;
-    data_nxt         = data;
-    o_dataout_nxt    = o_dataout;
-    refresh_flag_nxt = refresh_flag;
-    burst_index_nxt  = burst_index;
+    wait_states_nxt   = wait_states;
+    state_nxt         = state;
+    cmd_nxt           = CMD_NOP;
+    o_dataval_nxt     = o_dataval;
+    o_ready_nxt       = o_ready;
+    clk_en_nxt        = clk_en;
+    dqm_nxt           = dqm;
+    cmd_nxt           = cmd;
+    ret_state_nxt     = ret_state;
+    bank_addr_nxt     = bank_addr;
+    addr_nxt          = addr;
+    dqm_nxt           = dqm;
+    cmd_nxt           = cmd;
+    tristate_en_nxt   = tristate_en;
+    data_nxt          = data;
+    o_dataout_nxt     = o_dataout;
+    refresh_flag_nxt  = refresh_flag;
+    refresh_count_nxt = refresh_count;
+    burst_index_nxt   = burst_index;
+    rw_nxt            = rw;
+    en_nxt            = en;
+    is_writing_nxt    = is_writing;
+
+
+    refresh_count_nxt = refresh_count + 1;
+    if (refresh_count == REFRESH_COUNT_VAL) begin
+      refresh_count_nxt = 0;
+      refresh_flag = 1'b1;
+    end
 
     case (state)
       START: begin
+        //$display("t=%0t: START", $time);
         clk_en_nxt      = 1'b0;
         wait_states_nxt = WAIT_100US;
         ret_state_nxt   = INIT_PRECHARGE;
@@ -196,9 +240,10 @@ module sdram_ctrl #(
         clk_en_nxt      = 1'b1;
         cmd_nxt         = CMD_PRECHARGE;
         addr_nxt[10]    = 1'b1;
-        wait_states_nxt = TRC;
+        wait_states_nxt = TRP;
         ret_state_nxt   = INIT_AUTO_REFRESH0;
         state_nxt       = WAIT_STATE;
+        //$display("t=%0t: INIT_PRECHARGE, addr[10]=%b", $time, addr_nxt[10]);
       end
 
       INIT_AUTO_REFRESH0: begin
@@ -207,6 +252,7 @@ module sdram_ctrl #(
         wait_states_nxt = TRC;
         ret_state_nxt   = INIT_AUTO_REFRESH1;
         state_nxt       = WAIT_STATE;
+        //$display("t=%0t: INIT_AUTO_REFRESH0", $time);
       end
 
       INIT_AUTO_REFRESH1: begin
@@ -215,6 +261,7 @@ module sdram_ctrl #(
         wait_states_nxt = TRC;
         ret_state_nxt   = INIT_LOAD_MODE;
         state_nxt       = WAIT_STATE;
+        //$display("t=%0t: INIT_AUTO_REFRESH1", $time);
       end
 
       INIT_LOAD_MODE: begin
@@ -223,28 +270,45 @@ module sdram_ctrl #(
         wait_states_nxt = TCH;
         ret_state_nxt   = IDLE;
         state_nxt       = WAIT_STATE;
+        //$display("t=%0t: INIT_LOAD_MODE, mode=%b", $time, addr_nxt);
       end
 
       IDLE: begin
-        en_nxt      = 1'b0;
-        dqm_nxt     = 2'b11;
-        o_ready_nxt = 1'b0;
-        if (i_rw_en && !o_ready) begin
+        //$display("t=%0t: Reached IDLE - init complete!", $time);
+        tristate_en_nxt = 1'b0;
+        dqm_nxt         = 2'b00;
+        o_dataval_nxt   = 1'b0;
+        o_ready_nxt     = 1'b1;
+        if (en) begin
           cmd_nxt         = CMD_BANK_ACTIVATE;
           burst_index_nxt = 0;
           bank_addr_nxt   = select_bank;
           addr_nxt        = select_row;
           wait_states_nxt = TRCD;
-          ret_state_nxt   = i_rw_en ? READ : WRITE;
-        end else if (refresh_flag_nxt || i_rw_en) begin
-          //auto refresh RAM
+          ret_state_nxt   = rw ? READ : WRITE;
+          state_nxt       = WAIT_STATE;
+          en_nxt          = 1'b0;
+        end  // refresh every 7.7uS and refresh before burst read or write
+        else if (refresh_flag || i_sdram_en) begin  // entry point
+          wait_states_nxt  = TRCD;
           cmd_nxt          = CMD_PRECHARGE;
           addr_nxt[10]     = 1'b1;
           refresh_flag_nxt = 0;
-          addr_nxt         = 0;
-          bank_addr_nxt    = 0;
-
+          if (i_sdram_en) begin  // sample all the reqd data
+            en_nxt   = i_sdram_en;
+            addr_nxt = i_addr;
+            rw_nxt   = i_rw;
+          end
+          state_nxt     = WAIT_STATE;
+          ret_state_nxt = REFRESH;
         end
+      end
+
+      REFRESH: begin
+        cmd_nxt         = CMD_SELF_REFRESH_ENTRY;
+        wait_states_nxt = TRC;
+        state_nxt       = WAIT_STATE;
+        ret_state_nxt   = IDLE;
       end
 
       READ: begin
@@ -253,21 +317,20 @@ module sdram_ctrl #(
         wait_states_nxt = CAS_LATENCY;
         addr_nxt[10]    = 1'b0;
         bank_addr_nxt   = select_bank;
-        ret_state_nxt   = READ_DATA;
+        ret_state_nxt   = READ_BURST_DATA;
         state_nxt       = WAIT_STATE;
       end
 
-      READ_DATA: begin
+      READ_BURST_DATA: begin
         o_dataout_nxt   = sdram_data;
-        o_ready_nxt     = 1'b1;
+        o_dataval_nxt   = 1'b1;
         burst_index_nxt = burst_index + 1;
         if (burst_index == 512) begin
-          o_ready_nxt   = 1'b0;
-          cmd_nxt       = CMD_PRECHARGE;
-          wait_states   = TRP;
-          ret_state_nxt = IDLE;
-          state_nxt     = WAIT_STATE;
-
+          o_dataval_nxt   = 1'b0;
+          cmd_nxt         = CMD_PRECHARGE;
+          wait_states_nxt = TRP;
+          ret_state_nxt   = IDLE;
+          state_nxt       = WAIT_STATE;
         end
       end
 
@@ -277,21 +340,23 @@ module sdram_ctrl #(
         addr_nxt        = 0;
         bank_addr_nxt   = select_bank;
         addr_nxt[10]    = 1'b0;
-        en_nxt          = 1'b1;
+        tristate_en_nxt = 1'b1;
+        is_writing_nxt  = 1'b1;
         burst_index_nxt = burst_index + 1;
         state_nxt       = WRITE_BURST_DATA;
-
       end
 
       WRITE_BURST_DATA: begin
         data_nxt        = i_datain;
-        en_nxt          = 1'b1;
+        tristate_en_nxt = 1'b1;
+        is_writing_nxt  = 1'b1;
         burst_index_nxt = burst_index + 1;
         if (burst_index == 512) begin
-          en_nxt          = 1'b0;
+          tristate_en_nxt = 1'b0;
+          is_writing_nxt  = 1'b0;
           cmd_nxt         = CMD_PRECHARGE;
           wait_states_nxt = TRP + TCH;
-          ret_state       = IDLE;
+          ret_state_nxt   = IDLE;
           state_nxt       = WAIT_STATE;
         end
       end
@@ -301,7 +366,7 @@ module sdram_ctrl #(
         wait_states_nxt = wait_states - 1;
         if (wait_states == 1) begin
           state_nxt = ret_state;
-          // TO DO
+          if (ret_state == WRITE) tristate_en_nxt = 1;
         end
       end
       default: begin
@@ -312,16 +377,16 @@ module sdram_ctrl #(
   end
 
 
-  assign select_col  = {4'b0100, addr[8:2], 1'b0};
-  assign select_row  = addr[22:11];
-  assign select_bank = addr[10:9];
+  //assign select_col  = {4'b0100, addr[8:2], 1'b0};
+  assign select_row  = addr[12:2];
+  assign select_bank = addr[1:0];
 
   assign sdram_clk   = i_clk;
   assign sdram_cke   = clk_en;
   assign sdram_addr  = addr;
   assign sdram_dqm   = dqm;
   assign sdram_ba    = bank_addr;
-  assign sdram_data  = en ? data : 16'hz;
+  assign sdram_data  = tristate_en ? data : 16'hz;
 
   assign {sdram_csn, sdram_rasn, sdram_casn, sdram_wen} = cmd;
 

@@ -10,19 +10,21 @@ BUILD 	  	 	= build
 TCL_SCRIPT	 	= syn.tcl
 TCL_REP_SCRIPT	= syn_report.tcl
 LOG_DIR	  	 	= logs
+IP_DIR  		= ip
 
 ## SIMULATION
 SIM				= sdram
 SIM_SNAPSHOT	= sim_snapshot
 SIM_DIR 		= sim_output
 STATE_FILE      = waveform.surf.ron 
-SIM_FILES      = $(SRC_DIR)/sdram_ctrl.v \
+SIM_FILES      	= $(SRC_DIR)/sdram_ctrl.v \
 				 $(TB_DIR)/sdram_tb.v \
 				 $(TB_DIR)/mt48lc16m16a2.v
-SIM_EXEC	= $(SIM_DIR)/$(SIM)_tb.vvp
-VCD_FILE	= $(SIM_DIR)/$(SIM)_tb.vcd
+SIM_EXEC		= $(SIM_DIR)/$(SIM)_tb.vvp
+VCD_FILE		= $(SIM_DIR)/$(SIM)_tb.vcd
 
-
+ILA_XCI 		= $(IP_DIR)/ila_0/ila_0.xci
+IP_FILES 		= $(ILA_XCI)
 
 TIMESTAMP = $(shell date +%Y%m%d_%H%M%S)
 

@@ -46,6 +46,12 @@
                     selected: false,
                 ),
                 (
+                    item_ref: (15),
+                    level: 0,
+                    unfolded: true,
+                    selected: false,
+                ),
+                (
                     item_ref: (3),
                     level: 0,
                     unfolded: true,
@@ -59,6 +65,12 @@
                 ),
                 (
                     item_ref: (4),
+                    level: 0,
+                    unfolded: true,
+                    selected: false,
+                ),
+                (
+                    item_ref: (14),
                     level: 0,
                     unfolded: true,
                     selected: false,
@@ -99,10 +111,34 @@
                     unfolded: true,
                     selected: false,
                 ),
+                (
+                    item_ref: (16),
+                    level: 0,
+                    unfolded: true,
+                    selected: false,
+                ),
+                (
+                    item_ref: (17),
+                    level: 0,
+                    unfolded: true,
+                    selected: false,
+                ),
+                (
+                    item_ref: (18),
+                    level: 0,
+                    unfolded: true,
+                    selected: false,
+                ),
+                (
+                    item_ref: (19),
+                    level: 0,
+                    unfolded: true,
+                    selected: false,
+                ),
             ],
         ),
         displayed_items: {
-            (3): Variable((
+            (7): Variable((
                 variable_ref: (
                     path: (
                         strs: [
@@ -111,40 +147,19 @@
                         ],
                         id: Wellen((2)),
                     ),
-                    name: "state",
-                    id: Wellen((112)),
+                    name: "sdram_rasn",
+                    id: Wellen((40)),
                 ),
                 color: None,
                 background_color: None,
-                display_name: "state [3:0]",
-                display_name_type: Unique,
-                manual_name: None,
-                format: Some("Unsigned"),
-                field_formats: [],
-                height_scaling_factor: None,
-            )),
-            (4): Variable((
-                variable_ref: (
-                    path: (
-                        strs: [
-                            "sdram_tb",
-                            "inst_sdram_ctrl",
-                        ],
-                        id: Wellen((2)),
-                    ),
-                    name: "ret_state",
-                    id: Wellen((110)),
-                ),
-                color: None,
-                background_color: None,
-                display_name: "ret_state [3:0]",
+                display_name: "sdram_rasn",
                 display_name_type: Unique,
                 manual_name: None,
                 format: None,
                 field_formats: [],
                 height_scaling_factor: None,
             )),
-            (5): Variable((
+            (9): Variable((
                 variable_ref: (
                     path: (
                         strs: [
@@ -153,19 +168,19 @@
                         ],
                         id: Wellen((2)),
                     ),
-                    name: "cmd",
-                    id: Wellen((96)),
+                    name: "sdram_wen",
+                    id: Wellen((39)),
                 ),
                 color: None,
                 background_color: None,
-                display_name: "cmd [3:0]",
+                display_name: "sdram_wen",
                 display_name_type: Unique,
                 manual_name: None,
                 format: None,
                 field_formats: [],
                 height_scaling_factor: None,
             )),
-            (8): Variable((
+            (18): Variable((
                 variable_ref: (
                     path: (
                         strs: [
@@ -174,33 +189,12 @@
                         ],
                         id: Wellen((2)),
                     ),
-                    name: "sdram_casn",
-                    id: Wellen((45)),
+                    name: "i_rw",
+                    id: Wellen((31)),
                 ),
                 color: None,
                 background_color: None,
-                display_name: "sdram_casn",
-                display_name_type: Unique,
-                manual_name: None,
-                format: None,
-                field_formats: [],
-                height_scaling_factor: None,
-            )),
-            (10): Variable((
-                variable_ref: (
-                    path: (
-                        strs: [
-                            "sdram_tb",
-                            "inst_sdram_ctrl",
-                        ],
-                        id: Wellen((2)),
-                    ),
-                    name: "sdram_cke",
-                    id: Wellen((35)),
-                ),
-                color: None,
-                background_color: None,
-                display_name: "sdram_cke",
+                display_name: "i_rw",
                 display_name_type: Unique,
                 manual_name: None,
                 format: None,
@@ -228,6 +222,90 @@
                 field_formats: [],
                 height_scaling_factor: None,
             )),
+            (15): Variable((
+                variable_ref: (
+                    path: (
+                        strs: [
+                            "sdram_tb",
+                            "inst_sdram_ctrl",
+                        ],
+                        id: Wellen((2)),
+                    ),
+                    name: "i_rstn",
+                    id: Wellen((30)),
+                ),
+                color: None,
+                background_color: None,
+                display_name: "i_rstn",
+                display_name_type: Unique,
+                manual_name: None,
+                format: None,
+                field_formats: [],
+                height_scaling_factor: None,
+            )),
+            (16): Variable((
+                variable_ref: (
+                    path: (
+                        strs: [
+                            "sdram_tb",
+                            "inst_sdram_ctrl",
+                        ],
+                        id: Wellen((2)),
+                    ),
+                    name: "addr",
+                    id: Wellen((87)),
+                ),
+                color: None,
+                background_color: None,
+                display_name: "addr [11:0]",
+                display_name_type: Unique,
+                manual_name: None,
+                format: Some("Hexadecimal"),
+                field_formats: [],
+                height_scaling_factor: None,
+            )),
+            (10): Variable((
+                variable_ref: (
+                    path: (
+                        strs: [
+                            "sdram_tb",
+                            "inst_sdram_ctrl",
+                        ],
+                        id: Wellen((2)),
+                    ),
+                    name: "sdram_cke",
+                    id: Wellen((33)),
+                ),
+                color: None,
+                background_color: None,
+                display_name: "sdram_cke",
+                display_name_type: Unique,
+                manual_name: None,
+                format: None,
+                field_formats: [],
+                height_scaling_factor: None,
+            )),
+            (4): Variable((
+                variable_ref: (
+                    path: (
+                        strs: [
+                            "sdram_tb",
+                            "inst_sdram_ctrl",
+                        ],
+                        id: Wellen((2)),
+                    ),
+                    name: "ret_state",
+                    id: Wellen((111)),
+                ),
+                color: None,
+                background_color: None,
+                display_name: "ret_state [3:0]",
+                display_name_type: Unique,
+                manual_name: None,
+                format: None,
+                field_formats: [],
+                height_scaling_factor: None,
+            )),
             (1): Variable((
                 variable_ref: (
                     path: (
@@ -248,7 +326,7 @@
                 field_formats: [],
                 height_scaling_factor: None,
             )),
-            (7): Variable((
+            (8): Variable((
                 variable_ref: (
                     path: (
                         strs: [
@@ -257,12 +335,32 @@
                         ],
                         id: Wellen((2)),
                     ),
-                    name: "sdram_rasn",
-                    id: Wellen((41)),
+                    name: "sdram_casn",
+                    id: Wellen((43)),
                 ),
                 color: None,
                 background_color: None,
-                display_name: "sdram_rasn",
+                display_name: "sdram_casn",
+                display_name_type: Unique,
+                manual_name: None,
+                format: None,
+                field_formats: [],
+                height_scaling_factor: None,
+            )),
+            (14): Variable((
+                variable_ref: (
+                    path: (
+                        strs: [
+                            "sdram_tb",
+                        ],
+                        id: Wellen((1)),
+                    ),
+                    name: "init_comp",
+                    id: Wellen((11)),
+                ),
+                color: None,
+                background_color: None,
+                display_name: "init_comp",
                 display_name_type: Unique,
                 manual_name: None,
                 format: None,
@@ -279,7 +377,7 @@
                         id: Wellen((2)),
                     ),
                     name: "sdram_csn",
-                    id: Wellen((44)),
+                    id: Wellen((42)),
                 ),
                 color: None,
                 background_color: None,
@@ -290,7 +388,7 @@
                 field_formats: [],
                 height_scaling_factor: None,
             )),
-            (9): Variable((
+            (5): Variable((
                 variable_ref: (
                     path: (
                         strs: [
@@ -299,15 +397,36 @@
                         ],
                         id: Wellen((2)),
                     ),
-                    name: "sdram_wen",
-                    id: Wellen((40)),
+                    name: "cmd",
+                    id: Wellen((95)),
                 ),
                 color: None,
                 background_color: None,
-                display_name: "sdram_wen",
+                display_name: "cmd [3:0]",
                 display_name_type: Unique,
                 manual_name: None,
                 format: None,
+                field_formats: [],
+                height_scaling_factor: None,
+            )),
+            (3): Variable((
+                variable_ref: (
+                    path: (
+                        strs: [
+                            "sdram_tb",
+                            "inst_sdram_ctrl",
+                        ],
+                        id: Wellen((2)),
+                    ),
+                    name: "state",
+                    id: Wellen((113)),
+                ),
+                color: None,
+                background_color: None,
+                display_name: "state [3:0]",
+                display_name_type: Unique,
+                manual_name: None,
+                format: Some("Unsigned"),
                 field_formats: [],
                 height_scaling_factor: None,
             )),
@@ -321,7 +440,7 @@
                         id: Wellen((2)),
                     ),
                     name: "sdram_casn",
-                    id: Wellen((45)),
+                    id: Wellen((43)),
                 ),
                 color: None,
                 background_color: None,
@@ -332,25 +451,67 @@
                 field_formats: [],
                 height_scaling_factor: None,
             )),
+            (19): Variable((
+                variable_ref: (
+                    path: (
+                        strs: [
+                            "sdram_tb",
+                            "inst_sdram_ctrl",
+                        ],
+                        id: Wellen((2)),
+                    ),
+                    name: "o_dataout",
+                    id: Wellen((103)),
+                ),
+                color: None,
+                background_color: None,
+                display_name: "o_dataout [31:0]",
+                display_name_type: Unique,
+                manual_name: None,
+                format: None,
+                field_formats: [],
+                height_scaling_factor: None,
+            )),
+            (17): Variable((
+                variable_ref: (
+                    path: (
+                        strs: [
+                            "sdram_tb",
+                            "inst_sdram_ctrl",
+                        ],
+                        id: Wellen((2)),
+                    ),
+                    name: "i_datain",
+                    id: Wellen((29)),
+                ),
+                color: None,
+                background_color: None,
+                display_name: "i_datain [31:0]",
+                display_name_type: Unique,
+                manual_name: None,
+                format: None,
+                field_formats: [],
+                height_scaling_factor: None,
+            )),
         },
-        display_item_ref_counter: 13,
+        display_item_ref_counter: 19,
         viewports: [
             (
-                curr_left: (0.09991980531881277),
-                curr_right: (0.1001775539009726),
-                target_left: (0.0),
-                target_right: (1.0),
-                move_start_left: (0.0),
-                move_start_right: (1.0),
+                curr_left: (0.00992352622240772),
+                curr_right: (0.010497154938458276),
+                target_left: (0.016128380171667595),
+                target_right: (0.0101549164618845),
+                move_start_left: (0.016128380171667595),
+                move_start_right: (0.0101549164618845),
                 move_duration: None,
                 move_strategy: Instant,
             ),
         ],
         cursor: Some((1, [
-            100237674,
+            100148359,
         ])),
         markers: {},
-        focused_item: Some((4)),
+        focused_item: Some((16)),
         focused_transaction: (None, None),
         default_variable_name_type: Unique,
         scroll_offset: 0.0,
