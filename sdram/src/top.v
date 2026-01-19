@@ -1,17 +1,17 @@
 module top (
-    input         sys_clk,
-    input         uart_rx,
-    output        sdram_clk,
-    output        sdram_cke,
-    output [ 1:0] sdram_dqm,
-    output        sdram_casn,
-    output        sdram_rasn,
-    output        sdram_wen,
-    output        sdram_csn,
-    output [ 1:0] sdram_ba,
-    output [12:0] sdram_addr,
-    output [15:0] sdram_data,
-    output [ 7:0] debug_led
+    input             sys_clk,
+    input             uart_rx,
+    output            sdram_clk,
+    output            sdram_cke,
+    output     [ 1:0] sdram_dqm,
+    output            sdram_casn,
+    output            sdram_rasn,
+    output            sdram_wen,
+    output            sdram_csn,
+    output     [ 1:0] sdram_ba,
+    output     [12:0] sdram_addr,
+    output     [15:0] sdram_data,
+    output reg [ 7:0] debug_led
 
 );
 
@@ -45,12 +45,14 @@ module top (
 
   wire [15:0] s2f_dataout;
   wire        is_sdram_ready;
-  reg  [14:0] f2s_addr;
+  wire [14:0] f2s_addr;
   reg  [15:0] f2s_datain;
   wire        i_dataval;
   reg         o_rw;
   reg         o_sdram_en;
   wire        i_writing;
+  reg  [15:0] data;
+
 
   sdram_ctrl #(
       .SDRAM_CLK_FREQ_MHZ(SDRAM_CLK_FREQ_MHZ),
@@ -96,9 +98,14 @@ module top (
 
   localparam START = 0;
   localparam RESET = 1;
+  localparam WRITE_DATA = 2;
+  localparam READ_DATA = 3;
 
   reg [2:0] rstate;
-  reg rst_done = 0;
+  reg       rst_done = 0;
+  reg [9:0] burst_index;
+
+
   //assign debug_led = ~(w_rxbyte);
 
   always @(posedge clk_133mhz) begin
@@ -108,22 +115,54 @@ module top (
         if (!rst_done) rstate <= RESET;
         else begin
           if (is_sdram_ready) begin
-            o_sdram_en <= 1'b1;
-            f2s_addr   <= 0;
-            o_rw       <= 1'b0;  //write mode
-            rstate     <= WRITE_DATA;
+            rstate <= WRITE_DATA;
           end
         end
       end
 
       WRITE_DATA: begin
-        f2s_datain <= 0;
+        o_sdram_en <= 1'b1;
+        //f2s_addr   <= 0;
+        o_rw       <= 1'b0;  //write mode
+        f2s_datain <= 16'hAAAA;
+        if (burst_index >= 512) begin
+          o_rw        <= 1'b1;  //read mode
+          burst_index <= 0;
+          rstate      <= READ_DATA;
+        end else begin
+          if (!i_writing) begin
+            burst_index <= burst_index + 1;
+          end
+          rstate <= WRITE_DATA;
+        end
+      end
+
+      READ_DATA: begin
+        o_sdram_en <= 1'b1;
+        o_rw       <= 1'b1;
+        if (burst_index >= 512) begin
+          o_sdram_en  <= 1'b0;  //read mode
+          burst_index <= 0;
+          rstate      <= IDLE;
+        end else begin
+          if (o_ready) begin
+            data <= s2f_dataout;
+            burst_index <= burst_index + 1;
+          end
+          rstate <= READ_DATA;
+        end
+      end
+
+      IDLE: begin
+        debug_led <= 8'b00000001;
+        rstate <= IDLE;
       end
 
       RESET: begin
         if (r_rst_cycle < 10000) begin
           r_rst_cycle <= r_rst_cycle + 1;
           o_rstn      <= 0;
+          burst_index <= 0;
         end else begin
           o_rstn   <= 1'b1;
           rst_done <= 1'b1;
@@ -134,6 +173,7 @@ module top (
     endcase
   end
 
+  assign f2s_addr = burst_index;
 endmodule
 
 
