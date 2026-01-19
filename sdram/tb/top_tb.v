@@ -45,7 +45,7 @@ top uut(
 
   initial begin
     $dumpfile("sim_output/top_tb.vcd");
-    $dumpvars(0, sdram_tb);
+    $dumpvars(0, top_tb);
   end
 
   initial begin
