@@ -158,7 +158,7 @@ module mt48lc16m16a2 (
   // Write Burst Mode
   wire Write_burst_mode = Mode_reg[9];
 
-  wire Debug = 1'b0;  // Debug messages : 1 = On
+  wire Debug = 1'b1;  // Debug messages : 1 = On
   wire Dq_chk = Sys_clk & Data_in_enable;  // Check setup/hold time for DQ
 
   assign Dq = Dq_reg;  // DQ buffer
