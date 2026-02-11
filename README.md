@@ -11,4 +11,4 @@ This project is a work in progress and involves interfacing OV7670 camera module
 
 <img width="1571" height="735" alt="hardware setup" src="https://github.com/user-attachments/assets/5fe427c0-0153-4d92-9367-81b86b20af4e" />
 
-<img width="1571" height="735" alt="hardware setup 2" src="https://github.com/user-attachments/assets/5689796b-f722-4404-ba24-9c69f194cea1" />
+<img width="1129" height="1215" alt="hardware setup 2" src="https://github.com/user-attachments/assets/5689796b-f722-4404-ba24-9c69f194cea1" />
