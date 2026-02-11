@@ -1,4 +1,6 @@
-This project is a work in progress and involves interfacing OV7670 camera module to Xilinx Artix 7 FPGA board (Qmtech Wukong Board). The output camera frame is displayed on a VGA monitor.
+# OV7670 Camera interface with Xilinx Artix 7 FPGA
+
+This project is a work in progress and involves interfacing OV7670 camera module to Xilinx Artix 7 FPGA board (Qmtech Wukong Board). The output camera frame is displayed on a VGA monitor. SDRAM is used as a frame buffer to buffer the data and transmit it over VGA.
 
 ## Preliminary Block Diagram
 
