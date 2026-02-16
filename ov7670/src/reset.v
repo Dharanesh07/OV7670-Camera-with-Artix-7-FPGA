@@ -1,4 +1,6 @@
-module reset(
+module #(
+    parameter RESET_CYCLES = 32'd100000
+) reset(
     input i_clk,
     wire o_rstn,
     wire o_rst_done
