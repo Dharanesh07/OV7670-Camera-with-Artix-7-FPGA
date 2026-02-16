@@ -14,27 +14,20 @@ module ov7670 (
     output [7:0] debug_led
 );
 
+wire global_rstn;
+wire global_rst_done;
+localparam RESET_CYCLES = 10000;
+reset #(
+  .RESET_CYCLES(RESET_CYCLES)
+)inst (
+    .i_clk(sys_clk),
+    .o_rstn(global_rstn),
+    .o_rst_done(global_rst_done)
+);
 
-  reg rstn = 0;
-  reg rst_done = 0;
-  reg [32:0] r_rst_cycle = 0;
-
-  // 10 seconds at 50MHz
-  // localparam RESET_CYCLES = 32'd500000000;
-  localparam RESET_CYCLES = 32'd100000;
-
-  reg status;
-  always @(posedge sys_clk) begin
-    if ((r_rst_cycle < RESET_CYCLES) && (!rst_done)) begin
-      r_rst_cycle <= r_rst_cycle + 1;
-      rstn        <= 1'b0;
-      status      <= 1'b0;
-    end else begin
-      rstn <= 1'b1;
-      rst_done <= 1'b1;
-      status <= 1'b1;
-    end
-  end
+localparam OV7670_START_DELAY = 5000;
+localparam OV7670_RD_ADDR = 8'h43;
+localparam OV7670_WR_ADDR = 8'h42;
 
   localparam START = 0;
   localparam DEV_ADDR = 1;
@@ -47,20 +40,21 @@ module ov7670 (
 
   reg  [2:0] rstate;
   reg  [2:0] rstate_nxt;
-  reg        i2c_tx_start;
-  reg        i2c_tx_start_nxt;
-  reg        i2c_tx_stop;
-  reg        i2c_tx_stop_nxt;
-  reg  [7:0] i2c_wrbyte;
-  reg  [7:0] i2c_wrbyte_nxt;
-  wire [7:0] i2c_rdbyte;
-  wire       i2c_ack;
-  wire       i2c_dataval;
-  wire       i2c_tx_done;
-  reg        rep_start;
-  reg        rep_start_nxt;
-
-
+  reg        sccb_tx_start;
+  reg        sccb_tx_start_nxt;
+  reg        sccb_tx_stop;
+  reg        sccb_tx_stop_nxt;
+  wire [7:0] sccb_wrbyte;
+  reg  [7:0] sccb_wrbyte_nxt;
+  wire [7:0] sccb_rdbyte;
+  wire       sccb_ack;
+  wire       sccb_dataval;
+  wire       sccb_tx_done;
+  reg        sccb_rep_start;
+  reg        sccb_rep_start_nxt;
+  reg [10:0] delay_counter;
+  reg [10:0] delay_counter_nxt;
+  
   localparam I2C_FREQ = 100000;
   localparam CLK_FREQ = 50000000;
 
@@ -69,17 +63,17 @@ module ov7670 (
       .IP_CLK_FREQ(CLK_FREQ)
   ) inst_i2c (
       .i_clk          (sys_clk),
-      .i_rstn         (rstn),
-      .i_i2c_start    (i2c_tx_start),
-      .i_i2c_stop     (i2c_tx_stop),
-      .i_i2c_wr_byte  (i2c_wrbyte),
-      .i_i2c_rep_start(rep_start),
-      .o_i2c_tx_done  (i2c_tx_done),
-      .o_i2c_ack      (i2c_ack),
-      .o_i2c_dataval  (i2c_dataval),
-      .o_i2c_rd_byte  (i2c_rdbyte),
-      .i2c_scl        (i2c_scl),
-      .i2c_sda        (i2c_sda)
+      .i_rstn         (global_rstn),
+      .i_i2c_start    (sccb_tx_start),
+      .i_i2c_stop     (sccb_tx_stop),
+      .i_i2c_wr_byte  (sccb_wrbyte),
+      .i_i2c_rep_start(sccb_rep_start),
+      .o_i2c_tx_done  (sscb_tx_done),
+      .o_i2c_ack      (sscb_ack),
+      .o_i2c_dataval  (sscb_dataval),
+      .o_i2c_rd_byte  (sscb_rdbyte),
+      .i2c_scl        (ov7670_scl),
+      .i2c_sda        (ov7670_sda)
   );
 
 
@@ -89,17 +83,21 @@ module ov7670 (
   localparam LEN = $clog2(SIG_DEPTH);
 
   reg                  o_bram_rden;
+  reg                  o_bram_rden_nxt;
   reg  [      LEN-1:0] o_bram_addr;
+  reg  [      LEN-1:0] o_bram_addr_nxt;
   wire [SIG_WIDTH-1:0] i_bram_dat;
   wire                 bram_rd_comp;
+
+
   bram #(
       .WIDTH    (SIG_WIDTH),
       .DEPTH    (SIG_DEPTH),
       .INIT_FILE(SIG_FILE),
       .LEN      (LEN)
-  ) coeff_mem (
-      .i_bram_clkrd  (i_clk),
-      .i_bram_rstn   (i_rstn),
+  ) config_reg (
+      .i_bram_clkrd  (sys_clk),
+      .i_bram_rstn   (global_rstn),
       .i_bram_rden   (o_bram_rden),
       .i_bram_rdaddr (o_bram_addr),
       .o_bram_dataout(i_bram_dat),
@@ -113,16 +111,19 @@ module ov7670 (
   always @(posedge sys_clk) begin
     if (!rstn) begin
       rstate       <= 0;
-      i2c_wrbyte   <= 0;
-      i2c_tx_start <= 1'b0;
-      i2c_tx_stop  <= 1'b0;
-      rep_start    <= 1'b0;
+      sccb_wrbyte   <= 0;
+      sccb_tx_start <= 1'b0;
+      sccb_tx_stop  <= 1'b0;
+      sccb_rep_start    <= 1'b0;
     end else begin
       rstate       <= rstate_nxt;
-      i2c_tx_start <= i2c_tx_start_nxt;
-      i2c_tx_stop  <= i2c_tx_stop_nxt;
-      i2c_wrbyte   <= i2c_wrbyte_nxt;
-      rep_start    <= rep_start_nxt;
+      sccb_tx_start <= sccb_tx_start_nxt;
+      sccb_tx_stop  <= sccb_tx_stop_nxt;
+      sccb_wrbyte   <= sscb_wrbyte_nxt;
+      sccb_rep_start    <= sccb_rep_start_nxt;
+      o_bram_rden <= o_bram_rden_nxt;
+      o_bram_addr <= o_bram_addr_nxt;
+      delay_counter <= delay_counter_nxt;
     end
   end
 
@@ -130,66 +131,61 @@ module ov7670 (
   always @(*) begin
 
     rstate_nxt       = rstate;
-    i2c_wrbyte_nxt   = i2c_wrbyte;
-    //i2c_tx_start_nxt = i2c_tx_start;
-    i2c_tx_stop_nxt  = 1'b0;
-    i2c_tx_start_nxt = 1'b0;
-    rep_start_nxt    = 1'b0;
+    sscb_wrbyte_nxt   = sccb_wrbyte;
+    sccb_tx_stop_nxt  = 1'b0;
+    sccb_tx_start_nxt = 1'b0;
+    sccb_rep_start_nxt    = 1'b0;
+    o_bram_rden_nxt = 1'b0;
+    o_bram_addr_nxt = o_bram_addr;
+    delay_counter_nxt = delay_counter;
     case (rstate)
       START: begin  //0
         if (rst_done) begin
-          i2c_wrbyte_nxt = DS3231M_WR_ADDR;
-          i2c_tx_start_nxt = 1'b1;
-          rstate_nxt = DEV_ADDR;
+          delay_counter_nxt = OV7670_START_DELAY;
+          rstate_nxt = DELAY;
         end
       end
-      DEV_ADDR: begin  // 1
-        if (!i2c_ack) begin
-          i2c_wrbyte_nxt = DS3231M_SEC_REG;
-          i2c_tx_start_nxt = 1'b1;
-          rstate_nxt = WRITE_DATA;
+      
+      DEV_ADDR: begin
+        sccb_wrbyte_nxt = OV7670_WR_ADDR;
+        sccb_tx_start_nxt = 1'b1;
+        rstate_nxt = WAIT_ACK;
+      end
+
+      WAIT_ACK: begin
+        if(!sccb_ack && sccb_tx_done) begin
+          rstate_nxt = READ_BRAM;
+        end
+      end
+      
+      READ_BRAM: begin  // 1
+        o_bram_rden_nxt = 1'b1;
+        rstate_nxt = WRITE_ADDR;
+      end
+
+      WRITE_ADDR: begin
+        if(!sscb_ack) begin
+          sscb_wrbyte_nxt = i_bram_dat[15:8]; // send address
+          rstate_nxt = WRITE_DATA
         end
       end
 
       WRITE_DATA: begin  // 2
-        if (!i2c_ack) begin
-          i2c_wrbyte_nxt   = 8'h30;
-          i2c_tx_start_nxt = 1'b1;
-          rstate_nxt       = REPEAT_START;
+        if (!sscb_ack && !bram_rd_comp) begin
+          rstate_nxt       = READ_BRAM;
+        end else rstate_nxt = INIT_DONE;
+      end
+
+
+      INIT_DONE: begin  // 6
+        sccb_tx_stop_nxt = 1'b1;
+      end
+
+      DELAY: begin
+        delay_counter_nxt = delay_counter -1;
+        if(delay_counter == 0) begin
+          rstate_nxt = READ_BRAM;
         end
-      end
-
-      REPEAT_START: begin  // 3
-        if (!i2c_ack) begin
-          i2c_wrbyte_nxt  = DS3231M_RD_ADDR;
-          i2c_tx_stop_nxt = 1'b1;
-          rstate_nxt      = STOP1;
-        end
-      end
-
-      STOP1: begin
-        i2c_tx_start_nxt = 1'b1;
-        rstate_nxt = READ_ADDR;
-      end
-
-      READ_ADDR: begin  // 4
-        i2c_tx_start_nxt = 1'b1;
-        if (!i2c_ack) begin
-          i2c_wrbyte_nxt   = 8'h00;
-          i2c_tx_start_nxt = 1'b1;
-          rstate_nxt       = READ_DATA;
-        end
-      end
-
-      READ_DATA: begin  // 5
-        if (i2c_dataval) begin
-          i2c_tx_stop_nxt = 1'b1;
-          rstate_nxt      = IDLE;
-        end
-      end
-
-      IDLE: begin  // 6
-        i2c_tx_stop_nxt = 1'b1;
       end
 
       default: begin
@@ -205,12 +201,12 @@ module ov7670 (
       .probe1(dbg_sda),
       .probe2(dbg_i2c_state),
       .probe3(dbg_rw_flag),
-      .probe4(i2c_tx_stop),
-      .probe5(i2c_ack),
-      .probe6(i2c_tx_done),
+      .probe4(sccb_tx_stop),
+      .probe5(sscb_ack),
+      .probe6(sscb_tx_done),
       .probe7(dbg_scl_lo),
       .probe8(dbg_scl_hi),
-      .probe9(i2c_tx_start_nxt)
+      .probe9(sccb_tx_start_nxt)
   );
 */
 
