@@ -33,8 +33,6 @@ module i2c #(
     output           o_i2c_ack,
     output reg       o_i2c_dataval,
     output reg [7:0] o_i2c_rd_byte,
-    output reg       scl_en,
-    output reg       sda_en,
     inout            i2c_scl,
     inout            i2c_sda
 
