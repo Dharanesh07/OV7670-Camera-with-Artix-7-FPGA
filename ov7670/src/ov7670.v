@@ -1,7 +1,11 @@
+// Uses a reset controller, so reset input is not required
+
+
 `timescale 1ns / 1ps
 
 module ov7670 (
-    input        sys_clk,
+    input        i_ov7670_clk,
+    //input         i_ov7670_rstn,
     input        i_ov7670_pclk,
     input        i_ov7670_hsync,
     input        i_ov7670_vsync,
@@ -17,10 +21,11 @@ module ov7670 (
 wire global_rstn;
 wire global_rst_done;
 localparam RESET_CYCLES = 10000;
+
 reset #(
   .RESET_CYCLES(RESET_CYCLES)
 )inst (
-    .i_clk(sys_clk),
+    .i_rst_clk(i_ov7670_clk),
     .o_rstn(global_rstn),
     .o_rst_done(global_rst_done)
 );
@@ -31,20 +36,20 @@ localparam OV7670_WR_ADDR = 8'h42;
 
   localparam START = 0;
   localparam DEV_ADDR = 1;
-  localparam WRITE_DATA = 2;
-  localparam REPEAT_START = 3;
-  localparam READ_ADDR = 4;
-  localparam READ_DATA = 5;
-  localparam IDLE = 6;
-  localparam STOP1 = 7;
+  localparam WAIT_ACK = 2;
+  localparam READ_BRAM = 3;
+  localparam WRITE_ADDR = 4;
+  localparam WRITE_DATA = 5;
+  localparam INIT_DONE = 6;
+  localparam DELAY = 7;
 
-  reg  [2:0] rstate;
-  reg  [2:0] rstate_nxt;
+  reg  [3:0] rstate;
+  reg  [3:0] rstate_nxt;
   reg        sccb_tx_start;
   reg        sccb_tx_start_nxt;
   reg        sccb_tx_stop;
   reg        sccb_tx_stop_nxt;
-  wire [7:0] sccb_wrbyte;
+  reg [7:0] sccb_wrbyte;
   reg  [7:0] sccb_wrbyte_nxt;
   wire [7:0] sccb_rdbyte;
   wire       sccb_ack;
@@ -62,16 +67,16 @@ localparam OV7670_WR_ADDR = 8'h42;
       .I2C_FREQ   (I2C_FREQ),
       .IP_CLK_FREQ(CLK_FREQ)
   ) inst_i2c (
-      .i_clk          (sys_clk),
+      .i_clk          (i_ov7670_clk),
       .i_rstn         (global_rstn),
       .i_i2c_start    (sccb_tx_start),
       .i_i2c_stop     (sccb_tx_stop),
       .i_i2c_wr_byte  (sccb_wrbyte),
       .i_i2c_rep_start(sccb_rep_start),
-      .o_i2c_tx_done  (sscb_tx_done),
-      .o_i2c_ack      (sscb_ack),
-      .o_i2c_dataval  (sscb_dataval),
-      .o_i2c_rd_byte  (sscb_rdbyte),
+      .o_i2c_tx_done  (sccb_tx_done),
+      .o_i2c_ack      (sccb_ack),
+      .o_i2c_dataval  (sccb_dataval),
+      .o_i2c_rd_byte  (sccb_rdbyte),
       .i2c_scl        (ov7670_scl),
       .i2c_sda        (ov7670_sda)
   );
@@ -96,7 +101,7 @@ localparam OV7670_WR_ADDR = 8'h42;
       .INIT_FILE(SIG_FILE),
       .LEN      (LEN)
   ) config_reg (
-      .i_bram_clkrd  (sys_clk),
+      .i_bram_clkrd  (i_ov7670_clk),
       .i_bram_rstn   (global_rstn),
       .i_bram_rden   (o_bram_rden),
       .i_bram_rdaddr (o_bram_addr),
@@ -106,10 +111,8 @@ localparam OV7670_WR_ADDR = 8'h42;
 
 
 
-  assign debug_led = ~({4'b1010, rstate, status});
-
-  always @(posedge sys_clk) begin
-    if (!rstn) begin
+  always @(posedge i_ov7670_clk) begin
+    if (!global_rstn) begin
       rstate       <= 0;
       sccb_wrbyte   <= 0;
       sccb_tx_start <= 1'b0;
@@ -119,7 +122,7 @@ localparam OV7670_WR_ADDR = 8'h42;
       rstate       <= rstate_nxt;
       sccb_tx_start <= sccb_tx_start_nxt;
       sccb_tx_stop  <= sccb_tx_stop_nxt;
-      sccb_wrbyte   <= sscb_wrbyte_nxt;
+      sccb_wrbyte   <= sccb_wrbyte_nxt;
       sccb_rep_start    <= sccb_rep_start_nxt;
       o_bram_rden <= o_bram_rden_nxt;
       o_bram_addr <= o_bram_addr_nxt;
@@ -131,7 +134,7 @@ localparam OV7670_WR_ADDR = 8'h42;
   always @(*) begin
 
     rstate_nxt       = rstate;
-    sscb_wrbyte_nxt   = sccb_wrbyte;
+    sccb_wrbyte_nxt   = sccb_wrbyte;
     sccb_tx_stop_nxt  = 1'b0;
     sccb_tx_start_nxt = 1'b0;
     sccb_rep_start_nxt    = 1'b0;
@@ -140,7 +143,7 @@ localparam OV7670_WR_ADDR = 8'h42;
     delay_counter_nxt = delay_counter;
     case (rstate)
       START: begin  //0
-        if (rst_done) begin
+        if (global_rst_done) begin
           delay_counter_nxt = OV7670_START_DELAY;
           rstate_nxt = DELAY;
         end
@@ -164,14 +167,14 @@ localparam OV7670_WR_ADDR = 8'h42;
       end
 
       WRITE_ADDR: begin
-        if(!sscb_ack) begin
-          sscb_wrbyte_nxt = i_bram_dat[15:8]; // send address
-          rstate_nxt = WRITE_DATA
+        if(!sccb_ack) begin
+          sccb_wrbyte_nxt = i_bram_dat[15:8]; // send address
+          rstate_nxt = WRITE_DATA;
         end
       end
 
       WRITE_DATA: begin  // 2
-        if (!sscb_ack && !bram_rd_comp) begin
+        if (!sccb_ack && !bram_rd_comp) begin
           rstate_nxt       = READ_BRAM;
         end else rstate_nxt = INIT_DONE;
       end
@@ -196,14 +199,14 @@ localparam OV7670_WR_ADDR = 8'h42;
 
   /*
   ila_0 test (
-      .clk   (sys_clk),
+      .clk   (i_ov7670_clk),
       .probe0(dbg_scl),
       .probe1(dbg_sda),
       .probe2(dbg_i2c_state),
       .probe3(dbg_rw_flag),
       .probe4(sccb_tx_stop),
-      .probe5(sscb_ack),
-      .probe6(sscb_tx_done),
+      .probe5(sccb_ack),
+      .probe6(sccb_tx_done),
       .probe7(dbg_scl_lo),
       .probe8(dbg_scl_hi),
       .probe9(sccb_tx_start_nxt)
