@@ -14,7 +14,6 @@ module reset #(
   // localparam RESET_CYCLES = 32'd500000000;
   // localparam RESET_CYCLES = 32'd100000;
 
-  reg status;
   always @(posedge i_rst_clk) begin
     if ((r_rst_cycle < RESET_CYCLES) && (!rst_done)) begin
       r_rst_cycle <= r_rst_cycle + 1;
