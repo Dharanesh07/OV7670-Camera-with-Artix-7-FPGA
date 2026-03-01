@@ -1,78 +1,87 @@
-16'h1280 
-16'h1204
-16'h1520
-16'h40d0
-16'h1204 
-16'h1180
-16'h0C00
-16'h3E00
-16'h0400
-16'h40d0
-16'h3a04
-16'h1418
-16'h4FB3
-16'h50B3
-16'h5100
-16'h523d
-16'h53A7
-16'h54E4
-16'h589E
-16'h3DC0
-16'h1714
-16'h1802
-16'h3280
-16'h1903
-16'h1A7B
-16'h030A
-16'h0F41
-16'h1E00
-16'h330B
-16'h3C78
-16'h6900
-16'h7400
-16'hB084
-16'hB10c
-16'hB20e
-16'hB380
-16'h703a
-16'h7135
-16'h7211
-16'h73f0
-16'ha202
-16'h7a20
-16'h7b10
-16'h7c1e
-16'h7d35
-16'h7e5a
-16'h7f69
-16'h8076
-16'h8180
-16'h8288
-16'h838f
-16'h8496
-16'h85a3
-16'h86af
-16'h87c4
-16'h88d7
-16'h89e8
-16'h13e0
-16'h0000
-16'h1000
-16'h0d40
-16'h1418
-16'ha505
-16'hab07
-16'h2495
-16'h2533
-16'h26e3
-16'h9f78
-16'ha068
-16'ha103
-16'ha6d8
-16'ha7d8
-16'ha8f0
-16'ha990
-16'haa94
-16'h13e5
-16'h1E23
-16'h6906
+// First 8 bits are the address and the second 8 bits are the data bits
+1280       //reset all register to default values
+1204       //set output format to RGB
+1520       //pclk will not toggle during horizontal blank
+40d0       //RGB565
+1204       //COM7 set RGB color output
+1180       //CLKRC internal PLL matches input clock
+0c00       //COM3 default settings
+3e00       //COM14 no scaling, normal pclock
+0400       //COM1 disable CCIR656
+40d0       //COM15 RGB565, full output range
+3a04       //TSLB set correct output data sequence (magic)
+1418       //COM9 MAX AGC value x4 0001_1000
+4fb3       //MTX1 all of these are magical matrix coefficients
+50b3       //MTX2
+5100       //MTX3
+523d       //MTX4
+53a7       //MTX5
+54e4       //MTX6
+589e       //MTXS
+3dc0       //COM13 sets gamma enable, does not preserve reserved bits
+1714       //HSTART start high 8 bits
+1802       //HSTOP stop high 8 bits //these kill the odd colored line
+3280       //HREF edge offset
+1903       //VSTART start high 8 bits
+1a7b       //VSTOP stop high 8 bits
+030a       //VREF vsync edge offset
+0f41       //COM6 reset timings
+1e00       //MVFP disable mirror / flip //might have magic value of 03
+330b       //CHLF 
+
+//magic value from the internet
+3c78       //COM12 no HREF when VSYNC low
+6900       //GFIX fix gain control
+7400       //REG74 Digital gain control
+b084       //RSVD magic value from the internet reqd for good color
+b10c       //ABLC1
+b20e       //RSVD more magic internet values
+b380       //THL_ST
+
+//begin mystery scaling numbers
+703a
+7135
+7211
+73f0
+a202
+
+//gamma curve values
+7a20
+7b10
+7c1e
+7d35
+7e5a
+7f69
+8076
+8180
+8288
+838f
+8496
+85a3
+86af
+87c4
+88d7
+89e8
+
+//AGC and AEC
+13e0       //COM8, disable AGC / AEC
+0000       //set gain reg to 0 for AGC
+1000       //set ARCJ reg to 0
+0d40       //magic reserved bit for COM4
+1418       //COM9, 4x gain + magic bit
+a505       //BD50MAX
+ab07       //DB60MAX
+2495       //AGC upper limit
+2533       //AGC lower limit
+26e3       //AGC/AEC fast mode op region
+9f78       //HAECC1
+a068       //HAECC2
+a103       //magic
+a6d8       //HAECC3
+a7d8       //HAECC4
+a8f0       //HAECC5
+a990       //HAECC6
+aa94       //HAECC7
+13e5       //COM8, enable AGC / AEC
+1e23       //Mirror Image
+6906       //gain of RGB(manually adjusted)

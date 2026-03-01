@@ -28,6 +28,7 @@ module i2c #(
     input            i_i2c_start,
     input            i_i2c_rep_start,
     input            i_i2c_stop,
+    input            i_i2c_wait,
     input      [7:0] i_i2c_wr_byte,
     output           o_i2c_tx_done,
     output           o_i2c_ack,
@@ -75,7 +76,9 @@ module i2c #(
   wire                     scl_lo_clk_mid;
   reg                      rw_flag;
   reg                      rw_flag_nxt;
+  reg                      tx_done;
   reg                      tx_done_nxt;
+  reg                      i2c_ack;
   reg                      i2c_ack_nxt;
 
   reg                      is_repeat_start_write;
@@ -101,9 +104,11 @@ module i2c #(
       sda_en        <= 1;
       scl_en        <= 1;
       wr_byte       <= 0;
-      bit_index     <= 0;
+      bit_index     <= 8;
       clk_counter   <= 0;
       rw_flag       <= 0;
+      tx_done       <= 0;
+      i2c_ack       <= 0;
       o_i2c_rd_byte <= 0;
       o_i2c_dataval <= 0;
     end else begin
@@ -116,6 +121,8 @@ module i2c #(
       clk_counter   <= clk_counter_nxt;
       o_i2c_rd_byte <= o_i2c_rd_byte_nxt;
       o_i2c_dataval <= o_i2c_dataval_nxt;
+      i2c_ack       <= i2c_ack_nxt;
+      tx_done       <= tx_done_nxt;
     end
   end
 
@@ -210,8 +217,8 @@ module i2c #(
       end
       SEND_ACK: begin  //7
         if (scl_lo_clk_mid) begin
-          sda_en_nxt = 1'b0;  // i2c data acknowledge    
-          //sda_en_nxt = 1'b1;  // sccb do not need acknowledge
+          //sda_en_nxt = 1'b0;  // i2c data acknowledge    
+          sda_en_nxt = 1'b1;  // sccb do not need acknowledge
           if (sda_en == 0 || sda_en_nxt == 1) begin
             o_i2c_dataval_nxt = 1'b1;
             bit_index_nxt     = 7;
@@ -248,16 +255,16 @@ module i2c #(
   assign scl_hi_clk_mid = (scl_en == 1'b1) && (clk_counter == CLK_DIV_HALF) && (i2c_scl == 1'b1);
   assign scl_lo_clk_mid = (scl_en == 1'b0) && (clk_counter == CLK_DIV_HALF);
 
-  assign o_i2c_tx_done = tx_done_nxt;
-  assign o_i2c_ack = i2c_ack_nxt;
+  assign o_i2c_tx_done = tx_done;
+  assign o_i2c_ack = i2c_ack;
 
 
   //assign i2c_scl = scl_en ? 1'bz : 1'b0;
   //assign i2c_sda = sda_en ? 1'bz : 1'b0;
 
   //SCCB Operation (Master ACK has to be changed)
-  assign i2c_scl = scl_en ? 1'b1 : 1'b0;
-  assign i2c_sda = (state == READ_DATA || state == READ_ACK) ? 1'bz : (sda_en ? 1'b1 : 1'b0);
+  assign i2c_scl = (scl_en) ? 1'b1 : 1'b0;
+  assign i2c_sda = ((state == READ_DATA || state == READ_ACK) ? 1'bz : (sda_en) ? 1'b1 : 1'b0);
   //assign i2c_sda = sda_en ? 1'b1 : 1'b0;
 
 endmodule
