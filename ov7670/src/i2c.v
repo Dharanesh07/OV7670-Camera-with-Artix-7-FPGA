@@ -28,7 +28,6 @@ module i2c #(
     input            i_i2c_start,
     input            i_i2c_rep_start,
     input            i_i2c_stop,
-    input            i_i2c_wait,
     input      [7:0] i_i2c_wr_byte,
     output           o_i2c_tx_done,
     output           o_i2c_ack,
