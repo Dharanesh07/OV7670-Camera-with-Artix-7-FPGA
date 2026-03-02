@@ -5,7 +5,7 @@
 
 module ov7670 (
     input            i_ov7670_clk_24mhz,
-    input            i_clk_50mhz
+    input            i_clk_50mhz,
     //input         i_ov7670_rstn,
     input            i_ov7670_pclk,
     input            i_ov7670_hsync,
