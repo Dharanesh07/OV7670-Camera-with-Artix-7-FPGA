@@ -4,7 +4,8 @@
 `timescale 1ns / 1ps
 
 module ov7670 (
-    input            i_ov7670_clk,
+    input            i_ov7670_clk_24mhz,
+    input            i_clk_50mhz
     //input         i_ov7670_rstn,
     input            i_ov7670_pclk,
     input            i_ov7670_hsync,
@@ -124,7 +125,94 @@ module ov7670 (
       .o_bram_rd_comp(bram_rd_comp)
   );
 
+  
+  // Hsync Flip-flop synchronizer
+  reg hsync_ff1;
+  reg hsync_ff2;
+  wire hsync_active_pixels;
+  
+  always @(posedge i_ov7670_clk) begin
+    if(!global_rstn) begin
+      hsync_ff1 <= 1'b0;
+      hsync_ff2 <= 1'b0;
+    end else begin
+      hsync_ff1 <= i_ov7670_hsync;
+      hsync_ff2 <= hsync_ff1;
+    end 
+  end
+  
+  assign hsync_active_pixels = ((hsync_ff1 == 1'b1) && (hsync_ff2 == 1'b1));
 
+
+  // Vsync Flip-flop synchronizer
+  reg vsync_ff1;
+  reg vsync_ff2;
+  wire vsync_negedge;
+  wire vsync_valid_frame;
+  
+  always @(posedge i_ov7670_clk) begin
+    if(!global_rstn) begin
+      vsync_ff1 <= 1'b0;
+      vsync_ff2 <= 1'b0;
+    end else begin
+      vsync_ff1 <= i_ov7670_vsync;
+      vsync_ff2 <= vsync_ff1;
+    end 
+  end
+  
+  assign vsync_negedge = ((vsync_ff2 == 1'b1) && (vsync_ff1 == 1'b0));
+  assign vsync_valid_frame = ((vsync_ff1 == 1'b1) && (vsync_ff2 == 1'b1));
+
+ /* 
+  // pclk Flip-flop synchronizer
+  reg pclk_ff1;
+  reg pclk_ff2;
+  wire pclk_posedge;
+  
+  always @(posedge i_ov7670_clk) begin
+    if(!global_rstn) begin
+      pclk_ff1 <= 1'b0;
+      pclk_ff2 <= 1'b0;
+    end else begin
+      pclk_ff1 <= i_ov7670_pclk;
+      pclk_ff2 <= pclk_ff1;
+    end 
+  end
+
+  assign pclk_posedge = ((pclk_ff2 == 1'b0) && (pclk_ff1 == 1'b1));
+  */
+  
+  // Load frames from camera
+  reg [2:0] cam_state;
+  reg [15:0] pixel_frame;
+  
+  localparam FRAME_MSB = 0;
+  localparam FRAME_LSB = 1; 
+  
+  always @(posedge i_ov7670_pclk) begin
+    if(!global_rstn) begin
+      cam_state <= FRAME_MSB;
+      pixel_frame <= 0;
+    end else begin
+      case (cam_state) 
+        FRAME_MSB: begin
+          if(hsync_active_pixels) begin
+              pixel_frame [15:8] <= i_ov7670_data;
+              cam_state <= FRAME_LSB; 
+          end
+        end
+        FRAME_LSB: begin
+          if(hsync_active_pixels) begin
+              pixel_frame [7:0] <= i_ov7670_data;
+              cam_state <= FRAME_LSB; 
+          end
+        end
+        default: begin
+          cam_state <= FRAME_MSB;
+        end
+      endcase
+    end
+  end
 
   always @(posedge i_ov7670_clk) begin
     if (!global_rstn) begin
