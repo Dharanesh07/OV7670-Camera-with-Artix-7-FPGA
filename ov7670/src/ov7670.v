@@ -51,7 +51,6 @@ module ov7670 (
   localparam WRITE_DATA = 5;
   localparam INIT_DONE = 6;
   localparam DELAY = 7;
-  localparam READ_BRAM_WAIT = 8;
 
 
   reg  [ 3:0] rstate;
@@ -175,22 +174,19 @@ module ov7670 (
       DEV_ADDR: begin  //1 
         sccb_wrbyte_nxt   = OV7670_WR_ADDR;
         sccb_tx_start_nxt = 1'b1;
+        o_bram_rden_nxt = 1'b1;
         rstate_nxt        = READ_BRAM;
       end
 
       READ_BRAM: begin  // 3
         if (!sccb_ack) begin
-          o_bram_rden_nxt = 1'b1;
-          rstate_nxt      = READ_BRAM_WAIT;
+          sccb_wrbyte_nxt   = i_bram_dat[15:8];  // send address
+          sccb_tx_start_nxt = 1'b1;
+          rstate_nxt      = WRITE_ADDR;
         end
-      end
-      READ_BRAM_WAIT: begin
-        rstate_nxt = WRITE_ADDR;
       end
 
       WRITE_ADDR: begin  // 4
-        sccb_wrbyte_nxt   = i_bram_dat[15:8];  // send address
-        sccb_tx_start_nxt = 1'b1;
         rstate_nxt        = WRITE_DATA;
       end
 
