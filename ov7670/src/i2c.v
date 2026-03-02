@@ -54,7 +54,8 @@ module i2c #(
   localparam SEND_ACK = 7;
   localparam STOP1 = 8;
   localparam STOP2 = 9;
-  localparam LAST_STATE = 10;
+  localparam WAIT_ONECLK = 10;
+  localparam LAST_STATE = 11;
 
   localparam STATE_WIDTH = $clog2(LAST_STATE);
 
@@ -183,9 +184,13 @@ module i2c #(
             bit_index_nxt = 7;
             state_nxt     = READ_DATA;
           end else begin
-            state_nxt = NEW_DATA;
+            state_nxt = WAIT_ONECLK;
           end
         end
+      end
+
+      WAIT_ONECLK: begin
+        state_nxt = NEW_DATA;
       end
 
       NEW_DATA: begin  //4
@@ -268,4 +273,3 @@ module i2c #(
   //assign i2c_sda = sda_en ? 1'b1 : 1'b0;
 
 endmodule
-
