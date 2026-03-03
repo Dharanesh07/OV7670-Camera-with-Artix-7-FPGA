@@ -1,7 +1,9 @@
 // First 8 bits are the address and the second 8 bits are the data bits
+// RGB565 data format: RRRRRGGG GGGBBBBB
+// VGA resolution: 640 x 480, no scaling
 1280       //reset all register to default values
 1204       //set output format to RGB
-1520       //pclk will not toggle during horizontal blank
+1520       //COM10 pclk will not toggle during horizontal blank
 40d0       //RGB565
 1204       //COM7 set RGB color output
 1180       //CLKRC internal PLL matches input clock
@@ -83,5 +85,5 @@ a8f0       //HAECC5
 a990       //HAECC6
 aa94       //HAECC7
 13e5       //COM8, enable AGC / AEC
-1e23       //Mirror Image
+1e23       //Mirror Image, Verticall flipped
 6906       //gain of RGB(manually adjusted)
