@@ -12,7 +12,7 @@ This project is a work in progress and involves interfacing OV7670 camera module
 - [x] VGA controller at 640 x 480 pixels
 - [x] SCCB controller for OV7670
 - [x] Retriving data frames from OV7670
-- [] Final architecture design
+- [ ] Final architecture design
 
 
 ## Hardware Setup
