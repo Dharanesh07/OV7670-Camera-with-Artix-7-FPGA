@@ -8,12 +8,12 @@ This project is a work in progress and involves interfacing OV7670 camera module
 
 ## Project Status
 
-- ✔ Implemented SDRAM controller in Burst Mode
-- ✔ VGA controller at 640 x 480 pixels
-- ✔ SCCB controller for OV7670
-- ✔ Retriving data frames from OV7670
-- [ ] Final architecture design
-- ◻  Project setup
+- [x] Implemented SDRAM controller in Burst Mode
+- [x] VGA controller at 640 x 480 pixels
+- [x] SCCB controller for OV7670
+- [x] Retriving data frames from OV7670
+- [] Final architecture design
+
 
 ## Hardware Setup
 
