@@ -6,6 +6,13 @@ This project is a work in progress and involves interfacing OV7670 camera module
 
 <img width="1571" height="735" alt="preliminary block diagram" src="https://github.com/user-attachments/assets/90b36621-a1db-45cd-a9d6-248c15000ae4" />
 
+## Project Status
+
+- [x] Implemented SDRAM controller in Burst Mode
+- [x] VGA controller at 640 x 480 pixels
+- [x] SCCB controller for OV7670
+- [x] Retriving data frames from OV7670
+- [ ] Final architecture design
 
 ## Hardware Setup
 
