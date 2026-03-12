@@ -14,6 +14,18 @@ This project is a work in progress and involves interfacing OV7670 camera module
 - [x] Retriving data frames from OV7670
 - [ ] Final architecture design
 
+## Bandwidth Calculation
+OV7670 Sensor parameters:
+- Resolution = 640 × 480
+- Format = RGB565
+- Bits per pixel = 16 bits
+- Pixel clock = 24 MHz
+```
+Pixels per frame = 640 x 480 = 307200
+Bits per frame = 307200 × 16 bits = 4,915,200 bits
+Bytes per frame = 4,915,200 / 8 = 614,400 bytes ≈ 600 KB
+```
+
 
 ## Hardware Setup
 
