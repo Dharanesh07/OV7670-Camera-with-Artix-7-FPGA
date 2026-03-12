@@ -1,0 +1,35 @@
+// OV7670 Color Bar Test Pattern Mode 
+// Reset
+1280        // COM7 reset
+1204        // COM7 RGB output
+
+// RGB565 format
+40d0        // COM15 RGB565, full range
+3a04        // TSLB correct data order
+0c00        // COM3 default
+3e00        // COM14 no scaling
+0400        // COM1 disable CCIR656
+
+// Clock
+// 1100        // CLKRC - use PLL (or 1180 for bypass)
+1180        // CLKRC internal PLL
+// 1520        // COM10 no PCLK during H-blank
+1500        // COM10 Continous PCLK
+
+// VGA windowing
+1714        // HSTART
+1802        // HSTOP
+3280        // HREF
+1903        // VSTART
+1a7b        // VSTOP
+030a        // VREF
+
+// Disable AGC/AEC
+13e0        // COM8 disable AGC/AEC
+
+// Mirror/Flip 
+1e00        // Normal orientation
+
+// ENABLE COLOR BAR TEST PATTERN
+1202        // COM7 - RGB + color bar bit
+4208        // COM17 enable color bar

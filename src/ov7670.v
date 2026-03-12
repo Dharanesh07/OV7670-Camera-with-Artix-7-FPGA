@@ -4,9 +4,8 @@
 `timescale 1ns / 1ps
 
 module ov7670 (
-    input            i_ov7670_clk_24mhz,
-    input            i_clk_50mhz,
-    //input         i_ov7670_rstn,
+    input            sys_clk_50mhz,
+    input            i_ov7670_rstn,
     input            i_ov7670_pclk,
     input            i_ov7670_hsync,
     input            i_ov7670_vsync,
@@ -16,29 +15,40 @@ module ov7670 (
     output           o_ov7670_xclk,
     inout            ov7670_scl,
     inout            ov7670_sda,
+    inout            dbg_scl,
+    inout            dbg_sda,
     output     [7:0] debug_led
 );
 
+  wire clk_24mhz;
+
+  clock_24mhz inst_clock_24mhz (
+      .clk_in       (sys_clk),
+      .i_rstn       (1'b1),
+      .clk_out0     (clk_24mhz),
+      .is_pll_locked()
+  );
+  assign o_ov7670_xclk = clk_24mhz;
+
   wire global_rstn;
   wire global_rst_done;
-
-  // 1 clock cycle at 50MHz = 20 nS
-  // For 10000 clock cycles, delay = 0.2 mS
-  localparam RESET_CYCLES = 10000;
+  // 1 clock cycle at 24MHz = 41.66 nS
+  // For 0000 clock cycles, delay = 0.2 mS
+  localparam RESET_CYCLES = 32'd25000;
 
   reset #(
       .RESET_CYCLES(RESET_CYCLES)
   ) inst (
-      .i_rst_clk (i_ov7670_clk),
+      .i_rst_clk (clk_24mhz),
       .o_rstn    (global_rstn),
       .o_rst_done(global_rst_done)
   );
 
 
-  // 1 clock cycle at 50MHz = 20 nS
+  // 1 clock cycle at 24MHz = 41.66 nS
   localparam OV7670_START_DELAY = 300000;  // 60mS
   localparam OV7670_RESET_DELAY = 250000;  // 50 mS
-  localparam OV7670_I2C_DELAY = 33000;
+  localparam OV7670_I2C_DELAY = 330000;
 
 
   localparam OV7670_RD_ADDR = 8'h43;
@@ -77,13 +87,13 @@ module ov7670 (
   reg         sccb_wait_nxt;
 
   localparam I2C_FREQ = 100000;
-  localparam CLK_FREQ = 50000000;
+  localparam CLK_FREQ = 24000000;
 
   i2c #(
       .I2C_FREQ   (I2C_FREQ),
       .IP_CLK_FREQ(CLK_FREQ)
   ) inst_i2c (
-      .i_clk          (i_ov7670_clk),
+      .i_clk          (clk_24mhz),
       .i_rstn         (global_rstn),
       .i_i2c_start    (sccb_tx_start),
       .i_i2c_stop     (sccb_tx_stop),
@@ -99,8 +109,10 @@ module ov7670 (
 
 
   localparam SIG_WIDTH = 16;
-  localparam SIG_DEPTH = 78;
-  localparam SIG_FILE = "src/reg.mem";
+  //localparam SIG_DEPTH = 78;
+  //localparam SIG_FILE = "src/ov7670_config.mem";
+  localparam SIG_DEPTH = 19;
+  localparam SIG_FILE = "src/ov7670_test_pattern.mem";
   localparam LEN = $clog2(SIG_DEPTH);
 
   reg                  o_bram_rden;
@@ -117,7 +129,7 @@ module ov7670 (
       .INIT_FILE(SIG_FILE),
       .LEN      (LEN)
   ) config_reg (
-      .i_bram_clkrd  (i_ov7670_clk),
+      .i_bram_clkrd  (clk_24mhz),
       .i_bram_rstn   (global_rstn),
       .i_bram_rden   (o_bram_rden),
       .i_bram_rdaddr (o_bram_addr),
@@ -125,97 +137,21 @@ module ov7670 (
       .o_bram_rd_comp(bram_rd_comp)
   );
 
-  
-  // Hsync Flip-flop synchronizer
-  reg hsync_ff1;
-  reg hsync_ff2;
-  wire hsync_active_pixels;
-  
-  always @(posedge i_ov7670_clk) begin
-    if(!global_rstn) begin
-      hsync_ff1 <= 1'b0;
-      hsync_ff2 <= 1'b0;
-    end else begin
-      hsync_ff1 <= i_ov7670_hsync;
-      hsync_ff2 <= hsync_ff1;
-    end 
-  end
-  
-  assign hsync_active_pixels = ((hsync_ff1 == 1'b1) && (hsync_ff2 == 1'b1));
+  assign debug_led = ~(i_ov7670_data);
 
 
-  // Vsync Flip-flop synchronizer
-  reg vsync_ff1;
-  reg vsync_ff2;
-  wire vsync_negedge;
-  wire vsync_valid_frame;
-  
-  always @(posedge i_ov7670_clk) begin
-    if(!global_rstn) begin
-      vsync_ff1 <= 1'b0;
-      vsync_ff2 <= 1'b0;
-    end else begin
-      vsync_ff1 <= i_ov7670_vsync;
-      vsync_ff2 <= vsync_ff1;
-    end 
-  end
-  
-  assign vsync_negedge = ((vsync_ff2 == 1'b1) && (vsync_ff1 == 1'b0));
-  assign vsync_valid_frame = ((vsync_ff1 == 1'b1) && (vsync_ff2 == 1'b1));
+  ov7670_frame_grabber inst_ov7670_frame_grabber (
+      .i_pclk    (i_ov7670_pclk),
+      .i_hsync   (i_ov7670_hsync),
+      .i_vsync   (i_ov7670_vsync),
+      .pixel_data(i_ov7670_data)
+  );
 
- /* 
-  // pclk Flip-flop synchronizer
-  reg pclk_ff1;
-  reg pclk_ff2;
-  wire pclk_posedge;
-  
-  always @(posedge i_ov7670_clk) begin
-    if(!global_rstn) begin
-      pclk_ff1 <= 1'b0;
-      pclk_ff2 <= 1'b0;
-    end else begin
-      pclk_ff1 <= i_ov7670_pclk;
-      pclk_ff2 <= pclk_ff1;
-    end 
-  end
 
-  assign pclk_posedge = ((pclk_ff2 == 1'b0) && (pclk_ff1 == 1'b1));
-  */
-  
-  // Load frames from camera
-  reg [2:0] cam_state;
-  reg [15:0] pixel_frame;
-  
-  localparam FRAME_MSB = 0;
-  localparam FRAME_LSB = 1; 
-  
-  always @(posedge i_ov7670_pclk) begin
-    if(!global_rstn) begin
-      cam_state <= FRAME_MSB;
-      pixel_frame <= 0;
-    end else begin
-      case (cam_state) 
-        FRAME_MSB: begin
-          if(hsync_active_pixels) begin
-              pixel_frame [15:8] <= i_ov7670_data;
-              cam_state <= FRAME_LSB; 
-          end
-        end
-        FRAME_LSB: begin
-          if(hsync_active_pixels) begin
-              pixel_frame [7:0] <= i_ov7670_data;
-              cam_state <= FRAME_LSB; 
-          end
-        end
-        default: begin
-          cam_state <= FRAME_MSB;
-        end
-      endcase
-    end
-  end
-
-  always @(posedge i_ov7670_clk) begin
+  always @(posedge clk_24mhz) begin
     if (!global_rstn) begin
+      cam_state       <= FRAME_MSB;
+      pixel_frame     <= 0;
       rstate          <= 0;
       delay_ret_state <= 0;
       sccb_wrbyte     <= 0;
@@ -225,6 +161,7 @@ module ov7670 (
       o_ov7670_rstn   <= 1'b0;
       o_ov7670_pwdn   <= 1'b0;
     end else begin
+      o_ov7670_rstn   <= 1'b1;
       rstate          <= rstate_nxt;
       delay_ret_state <= delay_ret_state_nxt;
       sccb_tx_start   <= sccb_tx_start_nxt;
@@ -262,25 +199,25 @@ module ov7670 (
       DEV_ADDR: begin  //1 
         sccb_wrbyte_nxt   = OV7670_WR_ADDR;
         sccb_tx_start_nxt = 1'b1;
-        o_bram_rden_nxt = 1'b1;
+        o_bram_rden_nxt   = 1'b1;
         rstate_nxt        = READ_BRAM;
       end
 
       READ_BRAM: begin  // 3
-        if (!sccb_ack) begin
+        if (sccb_tx_done) begin
           sccb_wrbyte_nxt   = i_bram_dat[15:8];  // send address
           sccb_tx_start_nxt = 1'b1;
-          rstate_nxt      = WRITE_ADDR;
+          rstate_nxt        = WRITE_ADDR;
         end
       end
 
       WRITE_ADDR: begin  // 4
-        rstate_nxt        = WRITE_DATA;
+        rstate_nxt = WRITE_DATA;
       end
 
 
       WRITE_DATA: begin  // 5
-        if (!sccb_ack) begin
+        if (sccb_tx_done) begin
           sccb_wrbyte_nxt   = i_bram_dat[7:0];  // send data
           sccb_tx_start_nxt = 1'b1;
           if (bram_rd_comp) begin
@@ -316,6 +253,9 @@ module ov7670 (
   end
 
   assign is_cam_rst = (o_bram_addr == 1) ? 1'b1 : 1'b0;
+
+  assign dbg_sda = ov7670_sda;
+  assign dbg_scl = ov7670_scl;
 
   /*
   ila_0 test (

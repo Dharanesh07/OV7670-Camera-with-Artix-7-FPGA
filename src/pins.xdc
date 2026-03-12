@@ -1,7 +1,6 @@
 # Clock constraints
 #set_property CLOCK_DEDICATED_ROUTE FALSE [get_nets {sys_clk_IBUF}]
 
-# Configuration voltage (ADD THESE)
 set_property CFGBVS VCCO [current_design]
 set_property CONFIG_VOLTAGE 3.3 [current_design]
 #set_property BITSTREAM.CONFIG.SPI_BUSWIDTH 4 [current_design]
@@ -13,8 +12,8 @@ set_property PACKAGE_PIN G20 [get_ports led0]
 set_property IOSTANDARD LVCMOS33 [get_ports led1]
 set_property PACKAGE_PIN G21 [get_ports led1]
 
-set_property IOSTANDARD LVCMOS33 [get_ports sys_clk]
-set_property PACKAGE_PIN M21 [get_ports sys_clk]
+set_property IOSTANDARD LVCMOS33 [get_ports sys_clk_50mhz]
+set_property PACKAGE_PIN M21 [get_ports sys_clk_50mhz]
 
 #create_clock -period 20.000 -name sys_clk_pin -waveform {0.000 10.000} [get_ports sys_clk]
 
@@ -56,11 +55,11 @@ set_property PACKAGE_PIN U25 [get_ports {debug_led[7]}]
 
 # I2C
 
-set_property IOSTANDARD LVCMOS33 [get_ports {i2c_sda}]
-set_property PACKAGE_PIN W26 [get_ports {i2c_sda}]
+# set_property IOSTANDARD LVCMOS33 [get_ports {i2c_sda}]
+# set_property PACKAGE_PIN W26 [get_ports {i2c_sda}]
 
-set_property IOSTANDARD LVCMOS33 [get_ports {i2c_scl}]
-set_property PACKAGE_PIN U26 [get_ports {i2c_scl}]
+# set_property IOSTANDARD LVCMOS33 [get_ports {i2c_scl}]
+# set_property PACKAGE_PIN U26 [get_ports {i2c_scl}]
 
 
 # Camera
@@ -68,24 +67,21 @@ set_property PACKAGE_PIN U26 [get_ports {i2c_scl}]
 set_property IOSTANDARD LVCMOS33 [get_ports {i_ov7670_pclk}]
 set_property PACKAGE_PIN P24 [get_ports {i_ov7670_pclk}]
 
-set_property IOSTANDARD LVCMOS33 [get_ports {i_ov7670_mclk}]
-set_property PACKAGE_PIN R23 [get_ports {i_ov7670_mclk}]
-
 set_property IOSTANDARD LVCMOS33 [get_ports {i_ov7670_hsync}]
 set_property PACKAGE_PIN T24 [get_ports {i_ov7670_hsync}]
 
 set_property IOSTANDARD LVCMOS33 [get_ports {i_ov7670_vsync}]
 set_property PACKAGE_PIN R22 [get_ports {i_ov7670_vsync}]
 
-set_property IOSTANDARD LVCMOS33 [get_ports {i_ov7670_rstn}]
-set_property PACKAGE_PIN P20 [get_ports {i_ov7670_rstn}]
+set_property IOSTANDARD LVCMOS33 [get_ports {o_ov7670_rstn}]
+set_property PACKAGE_PIN P20 [get_ports {o_ov7670_rstn}]
 
-set_property IOSTANDARD LVCMOS33 [get_ports {i_ov7670_pwdn}]
-set_property PACKAGE_PIN N22 [get_ports {i_ov7670_pwdn}]
+set_property IOSTANDARD LVCMOS33 [get_ports {o_ov7670_pwdn}]
+set_property PACKAGE_PIN N22 [get_ports {o_ov7670_pwdn}]
 
-set_property IOSTANDARD LVCMOS33 [get_ports {i_ov7670_xclk}]
-set_property PACKAGE_PIN [get_ports {i_ov7670_xclk}]
-
+# MCLK
+set_property IOSTANDARD LVCMOS33 [get_ports {o_ov7670_xclk}] 
+set_property PACKAGE_PIN R23 [get_ports {o_ov7670_xclk}]
 
 set_property IOSTANDARD LVCMOS33 [get_ports {i_ov7670_data[0]}]
 set_property PACKAGE_PIN N21 [get_ports {i_ov7670_data[0]}]
@@ -117,4 +113,10 @@ set_property PACKAGE_PIN T25 [get_ports {ov7670_sda}]
 set_property IOSTANDARD LVCMOS33 [get_ports {ov7670_scl}]
 set_property PACKAGE_PIN T23 [get_ports {ov7670_scl}]
 
+# Camera Debug ports
 
+set_property IOSTANDARD LVCMOS33 [get_ports {dbg_scl}]
+set_property PACKAGE_PIN W26 [get_ports {dbg_scl}]
+
+set_property IOSTANDARD LVCMOS33 [get_ports {dbg_sda}]
+set_property PACKAGE_PIN Y26 [get_ports {dbg_sda}]

@@ -1,7 +1,7 @@
 module reset #(
     parameter RESET_CYCLES = 32'd100000
 ) (
-    input i_rst_clk,
+    input  i_rst_clk,
     output o_rstn,
     output o_rst_done
 );
@@ -24,7 +24,7 @@ module reset #(
     end
   end
 
-assign o_rstn = rstn;
-assign o_rst_done = rst_done;
+  assign o_rstn = rstn;
+  assign o_rst_done = rst_done;
 
 endmodule
