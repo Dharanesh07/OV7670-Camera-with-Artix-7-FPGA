@@ -30,7 +30,7 @@ Bytes per frame = 4,915,200 / 8 = 614,400 bytes ≈ 600 KB
 ### Camera data width
 ```
 Each pixel clock transmits 8 bits
-Data rate in bits: 24 MHz × 8 bits = 192 Mbit/s
+Data rate in bits: 24 MHz × 8 bits = 192 Mbps
 Data rate in bytes: 192 / 8 = 24 MB/s
 In average OV7670 outputs 30fps, so 614 KB × 30 ≈ 18.4 MB/s
 ```
