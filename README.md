@@ -20,10 +20,19 @@ OV7670 Sensor parameters:
 - Format = RGB565
 - Bits per pixel = 16 bits
 - Pixel clock = 24 MHz
+
+### Frame data
 ```
 Pixels per frame = 640 x 480 = 307200
 Bits per frame = 307200 × 16 bits = 4,915,200 bits
 Bytes per frame = 4,915,200 / 8 = 614,400 bytes ≈ 600 KB
+```
+### Camera data width
+```
+Each pixel clock transmits 8 bits
+Data rate in bits: 24 MHz × 8 bits = 192 Mbit/s
+Data rate in bytes: 192 / 8 = 24 MB/s
+In average OV7670 outputs 30fps, so 614 KB × 30 ≈ 18.4 MB/s
 ```
 
 
