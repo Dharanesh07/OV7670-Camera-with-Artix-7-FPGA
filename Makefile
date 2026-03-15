@@ -1,6 +1,6 @@
 # Project setup
-PROJ       = top
-TOP_MODULE = top
+PROJ       = ov7670
+TOP_MODULE = ov7670
 DEVICE     = xc7a100tfgg676-1
 
 # Source directories
@@ -13,18 +13,34 @@ LOG_DIR	  	 	= logs
 IP_DIR  		= ip
 
 ## SIMULATION
-SIM				= sdram
+SIM				= ov7670
 SIM_SNAPSHOT	= sim_snapshot
 SIM_DIR 		= sim_output
-STATE_FILE      = waveform.surf.ron 
-SIM_FILES      	= $(SRC_DIR)/sdram_ctrl.v \
-				 $(TB_DIR)/sdram_tb.v \
-				 $(TB_DIR)/mt48lc16m16a2.v
+STATE_FILE      = waveform.surf.ron
+SIM_FILES      	= $(TB_DIR)/ov7670_tb.v \
+				  $(SRC_DIR)/ov7670.v \
+				  $(SRC_DIR)/i2c.v \
+				  $(SRC_DIR)/clock_24mhz.v \
+				  $(SRC_DIR)/reset.v \
+				  $(SRC_DIR)/bram.v
+				  
+
 SIM_EXEC		= $(SIM_DIR)/$(SIM)_tb.vvp
 VCD_FILE		= $(SIM_DIR)/$(SIM)_tb.vcd
 
-ILA_XCI 		= $(IP_DIR)/ila_0/ila_0.xci
-IP_FILES 		= $(ILA_XCI)
+# VERILATOR_TOP   = top
+# VERILATOR_SRC   = $(SRC_DIR)/*.v
+
+VERILATOR_TOP   = ov7670
+
+VERILATOR_SRC   = $(TB_DIR)/ov7670_tb.v \
+				  $(SRC_DIR)/ov7670.v \
+				  $(SRC_DIR)/i2c.v \
+				  $(SRC_DIR)/clock_24mhz.v \
+				  $(SRC_DIR)/reset.v \
+				  $(SRC_DIR)/bram.v
+
+
 
 TIMESTAMP = $(shell date +%Y%m%d_%H%M%S)
 
@@ -51,6 +67,14 @@ prog: $(BUILD)/$(PROJ).bit
 	@echo 'Programming in RAM Mode'
 	openFPGALoader -c xvc-client --port 2542 $(BUILD)/$(PROJ).bit
 
+lint:
+	@echo "Running Verilator lint..."
+	verilator --lint-only \
+		-Wall \
+		-Wno-fatal \
+		--top-module $(VERILATOR_TOP) \
+		$(VERILATOR_SRC)
+
 sim: $(SIM_FILES)
 	#xvlog $(SRC_DIR)/$(SIM_NAME).v
 	#xvlog $(TB_DIR)/$(SIM_NAME)_tb.v
@@ -66,7 +90,6 @@ sim: $(SIM_FILES)
 sim_clean:
 	#rm -rf xsim.dir .Xil *.jou *.log *.pb *.wdb *.str
 	rm -rf $(SIM_DIR)/*
-	rm *.vcd *.vvp 
 
 build_folder:
 	mkdir -p $(BUILD)
@@ -75,5 +98,5 @@ log_folder:
 	mkdir -p $(LOG_DIR)
 
 clean:
-	rm $(BUILD)/*.bit
+	rm $(BUILD)/*
 	rm $(LOG_DIR)/*
