@@ -4,7 +4,7 @@
 `timescale 1ns / 1ps
 
 module ov7670 (
-    input            sys_clk_50mhz,
+    input            i_clk_24mhz,
     input            i_ov7670_rstn,
     input            i_ov7670_pclk,
     input            i_ov7670_hsync,
@@ -14,36 +14,10 @@ module ov7670 (
     output reg       o_ov7670_pwdn,
     output           o_ov7670_xclk,
     inout            ov7670_scl,
-    inout            ov7670_sda,
-    inout            dbg_scl,
-    inout            dbg_sda,
-    output     [7:0] debug_led
+    inout            ov7670_sda
 );
 
-  wire clk_24mhz;
-
-  clock_24mhz inst_clock_24mhz (
-      .clk_in       (sys_clk),
-      .i_rstn       (1'b1),
-      .clk_out0     (clk_24mhz),
-      .is_pll_locked()
-  );
-  assign o_ov7670_xclk = clk_24mhz;
-
-  wire global_rstn;
-  wire global_rst_done;
-  // 1 clock cycle at 24MHz = 41.66 nS
-  // For 0000 clock cycles, delay = 0.2 mS
-  localparam RESET_CYCLES = 32'd25000;
-
-  reset #(
-      .RESET_CYCLES(RESET_CYCLES)
-  ) inst (
-      .i_rst_clk (clk_24mhz),
-      .o_rstn    (global_rstn),
-      .o_rst_done(global_rst_done)
-  );
-
+  assign o_ov7670_xclk = i_clk_24mhz;
 
   // 1 clock cycle at 24MHz = 41.66 nS
   localparam OV7670_START_DELAY = 300000;  // 60mS
@@ -93,7 +67,7 @@ module ov7670 (
       .I2C_FREQ   (I2C_FREQ),
       .IP_CLK_FREQ(CLK_FREQ)
   ) inst_i2c (
-      .i_clk          (clk_24mhz),
+      .i_clk          (i_clk_24mhz),
       .i_rstn         (global_rstn),
       .i_i2c_start    (sccb_tx_start),
       .i_i2c_stop     (sccb_tx_stop),
@@ -129,7 +103,7 @@ module ov7670 (
       .INIT_FILE(SIG_FILE),
       .LEN      (LEN)
   ) config_reg (
-      .i_bram_clkrd  (clk_24mhz),
+      .i_bram_clkrd  (i_clk_24mhz),
       .i_bram_rstn   (global_rstn),
       .i_bram_rden   (o_bram_rden),
       .i_bram_rdaddr (o_bram_addr),
@@ -139,19 +113,24 @@ module ov7670 (
 
   assign debug_led = ~(i_ov7670_data);
 
+  wire [15:0] dbg_pixel_frame;
+  wire [11:0] dbg_line_counter;
+  wire [ 9:0] dbg_frame_counter;
 
   ov7670_frame_grabber inst_ov7670_frame_grabber (
-      .i_pclk    (i_ov7670_pclk),
-      .i_hsync   (i_ov7670_hsync),
-      .i_vsync   (i_ov7670_vsync),
-      .pixel_data(i_ov7670_data)
+      .i_pclk       (i_ov7670_pclk),
+      .i_rstn       (global_rstn),
+      .i_hsync      (i_ov7670_hsync),
+      .i_vsync      (i_ov7670_vsync),
+      .pixel_data   (i_ov7670_data),
+      .pixel_frame  (dbg_pixel_frame),
+      .line_counter (dbg_line_counter),
+      .frame_counter(dbg_frame_counter)
   );
 
 
-  always @(posedge clk_24mhz) begin
+  always @(posedge i_clk_24mhz) begin
     if (!global_rstn) begin
-      cam_state       <= FRAME_MSB;
-      pixel_frame     <= 0;
       rstate          <= 0;
       delay_ret_state <= 0;
       sccb_wrbyte     <= 0;
@@ -254,23 +233,5 @@ module ov7670 (
 
   assign is_cam_rst = (o_bram_addr == 1) ? 1'b1 : 1'b0;
 
-  assign dbg_sda = ov7670_sda;
-  assign dbg_scl = ov7670_scl;
-
-  /*
-  ila_0 test (
-      .clk   (i_ov7670_clk),
-      .probe0(dbg_scl),
-      .probe1(dbg_sda),
-      .probe2(dbg_i2c_state),
-      .probe3(dbg_rw_flag),
-      .probe4(sccb_tx_stop),
-      .probe5(sccb_ack),
-      .probe6(sccb_tx_done),
-      .probe7(dbg_scl_lo),
-      .probe8(dbg_scl_hi),
-      .probe9(sccb_tx_start_nxt)
-  );
-*/
 
 endmodule

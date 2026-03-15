@@ -21,7 +21,7 @@ P/N: W9825G6KH
 // words
 
 
-module sdram_ctrl #(
+module sdram #(
     parameter SDRAM_CLK_FREQ_MHZ = 64,
     parameter TRP_NS             = 20,
     parameter TRC_NS             = 66,
@@ -48,9 +48,7 @@ module sdram_ctrl #(
     output            sdram_wen,   //command
     output            sdram_rasn,  //command
     output            sdram_casn,  //command
-    inout      [15:0] sdram_data,
-    output     [15:0] rd_data,
-    output     [15:0] wr_data
+    inout      [15:0] sdram_data
 );
 
 
@@ -147,7 +145,8 @@ module sdram_ctrl #(
   localparam WRITE = 10;
   localparam WRITE_BURST_DATA = 11;
   localparam WAIT_STATE = 12;
-  localparam LAST_STATE = 13;
+  localparam WRITE_START = 13;
+  localparam LAST_STATE = 14;
 
   localparam STATE_WIDTH = $clog2(LAST_STATE);
   localparam WAIT_STATE_WIDTH = $clog2(WAIT_200US);
@@ -313,7 +312,7 @@ module sdram_ctrl #(
           bank_addr_nxt   = select_bank;
           addr_nxt        = select_row;
           wait_states_nxt = TRCD;
-          ret_state_nxt   = rw ? READ : WRITE;
+          ret_state_nxt   = rw ? READ : WRITE_START;
           state_nxt       = WAIT_STATE;
           en_nxt          = 1'b0;
         end  // refresh before burst read or write
@@ -361,6 +360,12 @@ module sdram_ctrl #(
         end
       end
 
+      WRITE_START: begin
+        is_writing_nxt = 1'b1;
+        state_nxt      = WRITE;
+      end
+
+      // Data is written as soon as the written command mode is set
       WRITE: begin  // 10
         data_nxt        = i_datain;
         tristate_en_nxt = 1'b1;
