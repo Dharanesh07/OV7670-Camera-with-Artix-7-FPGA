@@ -1,3 +1,5 @@
+`timescale 1ns / 10ps
+
 module bram #(
     parameter WIDTH = 16,
     parameter DEPTH = 101,

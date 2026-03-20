@@ -1,3 +1,5 @@
+
+`timescale 1ns / 10ps
 module async_fifo #(
     parameter WIDTH = 8,
     parameter DEPTH = 16
@@ -9,6 +11,7 @@ module async_fifo #(
     input              i_rd_clk,
     input              i_rdrst_n,
     output             wr_full,
+    output             half_full,
     output             rd_empty,
     input  [WIDTH-1:0] i_datain,
     output [WIDTH-1:0] o_dataout
@@ -69,12 +72,13 @@ module async_fifo #(
   write_ptr #(
       .ADDR_SIZE(ADDR_SIZE)
   ) inst_write_ptr (
-      .i_wr_inc     (i_wr_inc),
-      .i_wr_clk(i_wr_clk),
-      .i_wrrst_n(i_wrrst_n),
-      .o_wr_full(wr_full),
-      .o_wr_addr(waddr),
-      .o_gray_wrptr(wptr),
+      .i_wr_inc       (i_wr_inc),
+      .i_wr_clk       (i_wr_clk),
+      .i_wrrst_n      (i_wrrst_n),
+      .o_wr_full      (wr_full),
+      .half_full      (half_full),
+      .o_wr_addr      (waddr),
+      .o_gray_wrptr   (wptr),
       .i_gray_q2_rdptr(wq2_rptr)
   );
 endmodule

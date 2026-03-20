@@ -1,29 +1,39 @@
 // Uses a reset controller, so reset input is not required
 
-
-`timescale 1ns / 1ps
+`timescale 1ns / 10ps
 
 module ov7670 (
-    input            i_clk_24mhz,
-    input            i_ov7670_rstn,
-    input            i_ov7670_pclk,
-    input            i_ov7670_hsync,
-    input            i_ov7670_vsync,
-    input      [7:0] i_ov7670_data,
-    output reg       o_ov7670_rstn,
-    output reg       o_ov7670_pwdn,
-    output           o_ov7670_xclk,
-    inout            ov7670_scl,
-    inout            ov7670_sda
+    input             i_clk_24mhz,
+    // OV7670 camera IO signals
+    input             i_ov7670_rstn,
+    input             i_ov7670_pclk,
+    input             i_ov7670_hsync,
+    input             i_ov7670_vsync,
+    input      [ 7:0] i_ov7670_data,
+    output reg        o_ov7670_rstn,
+    output reg        o_ov7670_pwdn,
+    output            o_ov7670_xclk,
+    inout             ov7670_scl,
+    inout             ov7670_sda,
+    // FIFO
+    output     [15:0] ov7670_fifo_data,
+    output            ov7670_fifo_wren,
+    output            ov7670_new_frame,
+    output reg        ov7670_init_done
+
 );
 
   assign o_ov7670_xclk = i_clk_24mhz;
 
   // 1 clock cycle at 24MHz = 41.66 nS
-  localparam OV7670_START_DELAY = 300000;  // 60mS
-  localparam OV7670_RESET_DELAY = 250000;  // 50 mS
-  localparam OV7670_I2C_DELAY = 330000;
+  //localparam OV7670_START_DELAY = 300000;  // 60mS
+  //localparam OV7670_RESET_DELAY = 250000;  // 50 mS
+  //localparam OV7670_I2C_DELAY = 330000;
 
+  // for simulation
+  localparam OV7670_START_DELAY = 1;  // 60mS
+  localparam OV7670_RESET_DELAY = 1;  // 50 mS
+  localparam OV7670_I2C_DELAY = 1;
 
   localparam OV7670_RD_ADDR = 8'h43;
   localparam OV7670_WR_ADDR = 8'h42;
@@ -59,6 +69,8 @@ module ov7670 (
   wire        is_cam_rst;
   reg         sccb_wait;
   reg         sccb_wait_nxt;
+  reg         ov7670_init_done_nxt;
+  wire        fifo_wr;
 
   localparam I2C_FREQ = 100000;
   localparam CLK_FREQ = 24000000;
@@ -68,7 +80,7 @@ module ov7670 (
       .IP_CLK_FREQ(CLK_FREQ)
   ) inst_i2c (
       .i_clk          (i_clk_24mhz),
-      .i_rstn         (global_rstn),
+      .i_rstn         (i_ov7670_rstn),
       .i_i2c_start    (sccb_tx_start),
       .i_i2c_stop     (sccb_tx_stop),
       .i_i2c_wr_byte  (sccb_wrbyte),
@@ -104,14 +116,13 @@ module ov7670 (
       .LEN      (LEN)
   ) config_reg (
       .i_bram_clkrd  (i_clk_24mhz),
-      .i_bram_rstn   (global_rstn),
+      .i_bram_rstn   (i_ov7670_rstn),
       .i_bram_rden   (o_bram_rden),
       .i_bram_rdaddr (o_bram_addr),
       .o_bram_dataout(i_bram_dat),
       .o_bram_rd_comp(bram_rd_comp)
   );
 
-  assign debug_led = ~(i_ov7670_data);
 
   wire [15:0] dbg_pixel_frame;
   wire [11:0] dbg_line_counter;
@@ -119,55 +130,58 @@ module ov7670 (
 
   ov7670_frame_grabber inst_ov7670_frame_grabber (
       .i_pclk       (i_ov7670_pclk),
-      .i_rstn       (global_rstn),
       .i_hsync      (i_ov7670_hsync),
       .i_vsync      (i_ov7670_vsync),
-      .pixel_data   (i_ov7670_data),
-      .pixel_frame  (dbg_pixel_frame),
-      .line_counter (dbg_line_counter),
-      .frame_counter(dbg_frame_counter)
+      .i_8b_data    (i_ov7670_data),
+      .o_16b_px_data(ov7670_fifo_data),
+      .new_frame    (ov7670_new_frame),
+      .px_dataval   (fifo_wr)
   );
 
+  assign ov7670_fifo_wren = (ov7670_init_done == 1'b1) ? fifo_wr : 1'b0;
 
   always @(posedge i_clk_24mhz) begin
-    if (!global_rstn) begin
-      rstate          <= 0;
-      delay_ret_state <= 0;
-      sccb_wrbyte     <= 0;
-      sccb_tx_start   <= 1'b0;
-      sccb_tx_stop    <= 1'b0;
-      sccb_rep_start  <= 1'b0;
-      o_ov7670_rstn   <= 1'b0;
-      o_ov7670_pwdn   <= 1'b0;
+    if (!i_ov7670_rstn) begin
+      rstate           <= 0;
+      delay_ret_state  <= 0;
+      sccb_wrbyte      <= 0;
+      sccb_tx_start    <= 1'b0;
+      sccb_tx_stop     <= 1'b0;
+      sccb_rep_start   <= 1'b0;
+      o_ov7670_rstn    <= 1'b0;
+      o_ov7670_pwdn    <= 1'b0;
+      ov7670_init_done <= 1'b0;
     end else begin
-      o_ov7670_rstn   <= 1'b1;
-      rstate          <= rstate_nxt;
-      delay_ret_state <= delay_ret_state_nxt;
-      sccb_tx_start   <= sccb_tx_start_nxt;
-      sccb_tx_stop    <= sccb_tx_stop_nxt;
-      sccb_wrbyte     <= sccb_wrbyte_nxt;
-      sccb_rep_start  <= sccb_rep_start_nxt;
-      o_bram_rden     <= o_bram_rden_nxt;
-      o_bram_addr     <= o_bram_addr_nxt;
-      delay_counter   <= delay_counter_nxt;
+      o_ov7670_rstn    <= 1'b1;
+      rstate           <= rstate_nxt;
+      delay_ret_state  <= delay_ret_state_nxt;
+      sccb_tx_start    <= sccb_tx_start_nxt;
+      sccb_tx_stop     <= sccb_tx_stop_nxt;
+      sccb_wrbyte      <= sccb_wrbyte_nxt;
+      sccb_rep_start   <= sccb_rep_start_nxt;
+      o_bram_rden      <= o_bram_rden_nxt;
+      o_bram_addr      <= o_bram_addr_nxt;
+      delay_counter    <= delay_counter_nxt;
+      ov7670_init_done <= ov7670_init_done_nxt;
     end
   end
 
 
   always @(*) begin
-    rstate_nxt          = rstate;
-    delay_ret_state_nxt = delay_ret_state;
-    sccb_wrbyte_nxt     = sccb_wrbyte;
-    sccb_tx_stop_nxt    = 1'b0;
-    sccb_tx_start_nxt   = 1'b0;
-    sccb_rep_start_nxt  = 1'b0;
-    o_bram_rden_nxt     = 1'b0;
-    o_bram_addr_nxt     = o_bram_addr;
-    delay_counter_nxt   = delay_counter;
+    rstate_nxt           = rstate;
+    delay_ret_state_nxt  = delay_ret_state;
+    sccb_wrbyte_nxt      = sccb_wrbyte;
+    sccb_tx_stop_nxt     = 1'b0;
+    sccb_tx_start_nxt    = 1'b0;
+    sccb_rep_start_nxt   = 1'b0;
+    o_bram_rden_nxt      = 1'b0;
+    o_bram_addr_nxt      = o_bram_addr;
+    delay_counter_nxt    = delay_counter;
+    ov7670_init_done_nxt = ov7670_init_done;
 
     case (rstate)
       START: begin  //0
-        if (global_rst_done) begin
+        if (i_ov7670_rstn) begin
           delay_counter_nxt   = OV7670_START_DELAY;
           rstate_nxt          = DELAY;
           o_bram_addr_nxt     = 0;
@@ -214,7 +228,8 @@ module ov7670 (
       end
 
       INIT_DONE: begin  // 6
-        sccb_tx_stop_nxt = 1'b1;
+        sccb_tx_stop_nxt     = 1'b1;
+        ov7670_init_done_nxt = 1'b1;
       end
 
       DELAY: begin  // 7

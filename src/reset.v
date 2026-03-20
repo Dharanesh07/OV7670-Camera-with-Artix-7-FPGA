@@ -1,3 +1,5 @@
+`timescale 1ns / 10ps
+
 module reset #(
     parameter RESET_CYCLES = 32'd100000
 ) (

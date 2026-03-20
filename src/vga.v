@@ -1,7 +1,10 @@
+`timescale 1ns / 10ps
+
 module vga (
     input            i_clk_25mhz,
     input            i_rstn,
-    output           dp_en,
+    input            vga_en,
+    output           active_pix,
     output     [9:0] h_pos,
     output     [9:0] v_pos,
     output reg       vga_hsync,
@@ -23,6 +26,8 @@ module vga (
 
   reg [9:0] hsync_count;
   reg [9:0] vsync_count;
+  wire hsync_nxt;
+  wire vsync_nxt;
 
   // Pixel counters
   always @(posedge i_clk_25mhz) begin
@@ -67,7 +72,7 @@ module vga (
                         (vsync_count < (V_ACTIVE_PIXEL + V_FRONT_PORCH + V_SYNC_PULSE))) ? 
                        1'b0 : 1'b1;
 
-  assign dp_en = ((hsync_count <= H_ACTIVE_PIXEL) && (vsync_count <= V_ACTIVE_PIXEL)) ? 1'b1 : 1'b0;
+  assign active_pix = ((hsync_count <= H_ACTIVE_PIXEL) && (vsync_count <= V_ACTIVE_PIXEL)) ? 1'b1 : 1'b0;
 
   assign h_pos = hsync_count;
   assign v_pos = vsync_count;

@@ -12,12 +12,15 @@
 //ADDR_SIZE:0 is used for pointers because they need an extra bit to track wrap-around conditions.
 //ADDR_SIZE-1:0 is used for addresses because they directly index into the FIFO memory and do not need the extra bit.
 
+`timescale 1ns / 10ps
+
 module write_ptr #(
     parameter ADDR_SIZE = 4
 ) (
     input                      i_wr_inc,
     input                      i_wr_clk,
     input                      i_wrrst_n,
+    output reg                 half_full,
     output reg                 o_wr_full,
     output     [ADDR_SIZE-1:0] o_wr_addr,
     output reg [ADDR_SIZE : 0] o_gray_wrptr,
@@ -28,6 +31,7 @@ module write_ptr #(
   wire [ADDR_SIZE:0] wr_gray_next;
   wire [ADDR_SIZE:0] wr_bin_next;
   wire               wr_full_val;
+  wire               wr_half_full;
 
   always @(posedge i_wr_clk) begin
     if (!i_wrrst_n) begin
@@ -42,8 +46,10 @@ module write_ptr #(
   always @(posedge i_wr_clk) begin
     if (!i_wrrst_n) begin
       o_wr_full <= 1'b0;
+      half_full <= 1'b0;
     end else begin
       o_wr_full <= wr_full_val;
+      half_full <= wr_half_full;
     end
   end
 

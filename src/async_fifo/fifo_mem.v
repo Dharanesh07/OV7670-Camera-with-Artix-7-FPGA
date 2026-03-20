@@ -36,6 +36,7 @@ endmodule
 
 */
 
+`timescale 1ns / 10ps
 
 module fifo_mem #(
     parameter DATA_SIZE = 8,
@@ -49,7 +50,7 @@ module fifo_mem #(
     input                      wclk_en,
     input                      wfull,
     input                      wclk,
-    input                      rclk       // Added read clock
+    input                      rclk      // Added read clock
 );
 
   localparam DEPTH = 1 << ADDR_SIZE;
@@ -62,7 +63,7 @@ module fifo_mem #(
 
   // Read port (synchronous)
   always @(posedge rclk) begin
-    if (!i_rstn) rdata <= 32'b0;
+    if (!i_rstn) rdata <= 0;
     else rdata <= mem[raddr];
   end
 

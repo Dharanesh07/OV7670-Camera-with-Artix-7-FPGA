@@ -1,6 +1,6 @@
 # Project setup
-PROJ       = ov7670
-TOP_MODULE = ov7670
+PROJ       = top
+TOP_MODULE = top 
 DEVICE     = xc7a100tfgg676-1
 
 # Source directories
@@ -13,14 +13,29 @@ LOG_DIR	  	 	= logs
 IP_DIR  		= ip
 
 ## SIMULATION
-SIM				= ov7670
+SIM				= top
 SIM_SNAPSHOT	= sim_snapshot
 SIM_DIR 		= sim_output
 STATE_FILE      = waveform.surf.ron
-SIM_FILES      	= $(TB_DIR)/ov7670_tb.v \
+SIM_FILES      	= $(TB_DIR)/top_tb.v \
+				  $(TB_DIR)/mt48lc16m16a2.v \
+				  $(TB_DIR)/ov7670_vcd.v \
+				  $(TB_DIR)/clock.v \
+				  $(SRC_DIR)/top.v \
+				  $(SRC_DIR)/fifo.v \
 				  $(SRC_DIR)/ov7670.v \
+				  $(SRC_DIR)/ov7670_frame_grabber.v \
+				  $(SRC_DIR)/dual_port_bram.v \
 				  $(SRC_DIR)/i2c.v \
-				  $(SRC_DIR)/clock_24mhz.v \
+				  $(SRC_DIR)/sdram.v \
+				  $(SRC_DIR)/sdram_controller.v \
+				  $(SRC_DIR)/vga.v \
+				  $(SRC_DIR)/vga_controller.v \
+				  $(SRC_DIR)/async_fifo/write_ptr.v \
+				  $(SRC_DIR)/async_fifo/read_ptr.v \
+				  $(SRC_DIR)/async_fifo/synchronizer.v \
+				  $(SRC_DIR)/async_fifo/fifo_mem.v \
+				  $(SRC_DIR)/async_fifo/async_fifo.v \
 				  $(SRC_DIR)/reset.v \
 				  $(SRC_DIR)/bram.v
 				  
@@ -31,15 +46,29 @@ VCD_FILE		= $(SIM_DIR)/$(SIM)_tb.vcd
 # VERILATOR_TOP   = top
 # VERILATOR_SRC   = $(SRC_DIR)/*.v
 
-VERILATOR_TOP   = ov7670
+VERILATOR_TOP   = top
 
-VERILATOR_SRC   = $(TB_DIR)/ov7670_tb.v \
+VERILATOR_SRC   = $(TB_DIR)/top_tb.v \
+				  $(TB_DIR)/mt48lc16m16a2.v \
+				  $(TB_DIR)/ov7670_vcd.v \
+				  $(SRC_DIR)/top.v \
+				  $(SRC_DIR)/fifo.v \
 				  $(SRC_DIR)/ov7670.v \
+				  $(SRC_DIR)/ov7670_frame_grabber.v \
+				  $(SRC_DIR)/dual_port_bram.v \
 				  $(SRC_DIR)/i2c.v \
-				  $(SRC_DIR)/clock_24mhz.v \
+				  $(SRC_DIR)/sdram.v \
+				  $(SRC_DIR)/sdram_controller.v \
+				  $(SRC_DIR)/vga.v \
+				  $(SRC_DIR)/vga_controller.v \
+				  $(SRC_DIR)/async_fifo/write_ptr.v \
+				  $(SRC_DIR)/async_fifo/read_ptr.v \
+				  $(SRC_DIR)/async_fifo/synchronizer.v \
+				  $(SRC_DIR)/async_fifo/fifo_mem.v \
+				  $(SRC_DIR)/async_fifo/async_fifo.v \
+				  $(TB_DIR)/clock.v \
 				  $(SRC_DIR)/reset.v \
 				  $(SRC_DIR)/bram.v
-
 
 
 TIMESTAMP = $(shell date +%Y%m%d_%H%M%S)

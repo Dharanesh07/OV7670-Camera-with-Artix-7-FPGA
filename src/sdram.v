@@ -1,4 +1,3 @@
-`timescale 1ns / 1ps
 /*
 P/N: W9825G6KH
 // QMTECH Wukong On-Board 32MB Winbond SDRAM, W9825G6KH-6
@@ -20,6 +19,7 @@ P/N: W9825G6KH
 // Column address: Not required since we are accessing the entire page of 512
 // words
 
+`timescale 1ns / 10ps
 
 module sdram #(
     parameter SDRAM_CLK_FREQ_MHZ = 64,
@@ -128,8 +128,7 @@ module sdram #(
   reg [ 9:0] burst_index;
   reg [ 9:0] burst_index_nxt;
   reg        is_writing_nxt;
-  assign rd_data = o_dataout_nxt;
-  assign wr_data = data;
+
 
   //States
   localparam START = 0;

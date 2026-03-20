@@ -6,7 +6,7 @@
 // CLKOUT1: 1200 / 50 = 24.0 MHz (OV7670)
 // CLKOUT2: 1200 / 48 = 25.0 MHz (VGA)
 
-`timescale 1ns / 1ps
+`timescale 1ns / 10ps
 
 
 module clock (
