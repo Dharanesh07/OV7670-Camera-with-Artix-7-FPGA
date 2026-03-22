@@ -20,11 +20,12 @@ module vga_controller (
   reg  [3:0] green;
   reg        vga_enable;
 
+  wire       valid_px;
   vga inst_vga (
       .i_clk_25mhz(i_clk_25mhz),
       .i_rstn     (i_rstn),
-      .vga_en     (),
-      .active_pix (disp_enable),
+      .vga_en     (vga_enable),
+      .active_pix (valid_px),
       .h_pos      (x_pos),
       .v_pos      (y_pos),
       .vga_hsync  (vga_hsync),
@@ -42,6 +43,7 @@ module vga_controller (
       red        <= 0;
       blue       <= 0;
       green      <= 0;
+      fifo_rden  <= 1'b0;
     end else begin
       if (!fifo_empty) begin
         vga_enable <= 1'b1;

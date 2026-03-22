@@ -6,6 +6,7 @@
 // is loaded into q1. The reset signal (rst_n) is active low, meaning the 
 // FIFO is reset when rst_n is low.  
 
+`timescale 1ns / 10ps
 
 module synchronizer #(
     parameter WIDTH = 4

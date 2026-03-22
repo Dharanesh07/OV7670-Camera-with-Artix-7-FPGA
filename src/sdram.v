@@ -2,7 +2,6 @@
 P/N: W9825G6KH
 // QMTECH Wukong On-Board 32MB Winbond SDRAM, W9825G6KH-6
 
-
 4M words × 4 banks × 16 bits
 = 16M words × 16 bits
 = 256 Mbits
@@ -102,8 +101,6 @@ module sdram #(
   reg        en_nxt;
   reg        rw_nxt;
   reg        rw;
-  reg        en_req;
-  reg        en_req_nxt;
   reg [ 3:0] cmd;
   reg [ 3:0] cmd_nxt;
   reg [ 1:0] dqm;
@@ -141,10 +138,10 @@ module sdram #(
   localparam REFRESH = 7;
   localparam READ = 8;
   localparam READ_BURST_DATA = 9;
-  localparam WRITE = 10;
-  localparam WRITE_BURST_DATA = 11;
-  localparam WAIT_STATE = 12;
-  localparam WRITE_START = 13;
+  localparam WRITE_BEGIN = 10;
+  localparam WRITE = 11;
+  localparam WRITE_BURST_DATA = 12;
+  localparam WAIT_STATE = 13;
   localparam LAST_STATE = 14;
 
   localparam STATE_WIDTH = $clog2(LAST_STATE);
@@ -183,7 +180,6 @@ module sdram #(
       is_writing    <= 1'b0;
       input_addr    <= 0;
       clk_en        <= 1'b1;
-      en_req        <= 1'b0;
     end else begin
       state         <= state_nxt;
       ret_state     <= ret_state_nxt;
@@ -205,7 +201,6 @@ module sdram #(
       en            <= en_nxt;
       is_writing    <= is_writing_nxt;
       input_addr    <= input_addr_nxt;
-      en_req        <= en_req_nxt;
     end
   end
 
@@ -228,14 +223,16 @@ module sdram #(
     refresh_flag_nxt  = refresh_flag;
     refresh_count_nxt = refresh_count;
     burst_index_nxt   = burst_index;
-    rw_nxt            = rw;
-    en_nxt            = en;
+    //rw_nxt            = rw;
+    rw_nxt            = i_rw;
+    //en_nxt            = en;
+    en_nxt            = i_sdram_en;
     is_writing_nxt    = is_writing;
-    input_addr_nxt    = input_addr;
+    //input_addr_nxt    = input_addr;
+    input_addr_nxt    = i_addr;
     tristate_en_nxt   = 1'b0;
     dqm_nxt           = 2'b00;
     o_dataval_nxt     = 1'b0;
-    en_req_nxt        = en_req;
 
 
 
@@ -246,12 +243,6 @@ module sdram #(
       refresh_flag_nxt  = 1'b1;
     end
 
-    // sdram_en capture latch
-    if (i_sdram_en && !en_req && !en) begin
-      en_req_nxt     = 1'b1;
-      input_addr_nxt = i_addr;
-      rw_nxt         = i_rw;
-    end
 
     case (state)
       START: begin  //0
@@ -311,15 +302,11 @@ module sdram #(
           bank_addr_nxt   = select_bank;
           addr_nxt        = select_row;
           wait_states_nxt = TRCD;
-          ret_state_nxt   = rw ? READ : WRITE_START;
+          ret_state_nxt   = rw ? READ : WRITE_BEGIN;
           state_nxt       = WAIT_STATE;
           en_nxt          = 1'b0;
         end  // refresh before burst read or write
-        else if (refresh_flag || en_req) begin  // entry point
-          if (en_req) begin
-            en_nxt = 1'b1;
-            en_req_nxt = 1'b0;
-          end
+        else if (refresh_flag ) begin  // entry point
           wait_states_nxt  = TRP;
           cmd_nxt          = CMD_PRECHARGE;
           addr_nxt[10]     = 1'b1;
@@ -341,6 +328,7 @@ module sdram #(
         addr_nxt        = 0;
         wait_states_nxt = CAS_LATENCY;
         addr_nxt[10]    = 1'b0;
+        burst_index_nxt = 1'b0;
         bank_addr_nxt   = select_bank;
         ret_state_nxt   = READ_BURST_DATA;
         state_nxt       = WAIT_STATE;
@@ -359,13 +347,13 @@ module sdram #(
         end
       end
 
-      WRITE_START: begin
+      WRITE_BEGIN: begin  // 10
         is_writing_nxt = 1'b1;
-        state_nxt      = WRITE;
+        state_nxt = WRITE;
       end
 
       // Data is written as soon as the written command mode is set
-      WRITE: begin  // 10
+      WRITE: begin  // 11
         data_nxt        = i_datain;
         tristate_en_nxt = 1'b1;
         cmd_nxt         = CMD_BURST_WRITE;
@@ -377,7 +365,7 @@ module sdram #(
         state_nxt       = WRITE_BURST_DATA;
       end
 
-      WRITE_BURST_DATA: begin  // 11
+      WRITE_BURST_DATA: begin  // 12
         cmd_nxt         = CMD_NOP;  // To prevent from restarting burst transaction
         data_nxt        = i_datain;
         tristate_en_nxt = 1'b1;
@@ -393,7 +381,7 @@ module sdram #(
         end
       end
 
-      WAIT_STATE: begin  // 12
+      WAIT_STATE: begin  // 13
         cmd_nxt         = CMD_NOP;
         wait_states_nxt = wait_states - 1;
         if (wait_states == 1) state_nxt = ret_state;

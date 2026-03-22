@@ -34,9 +34,9 @@ module top (
     output        ov7670_init_done
 );
 
-  localparam RESET_CYCLES = 32'd25000;
+  localparam RESET_CYCLES = 25000;
   localparam WIDTH = 16;
-  localparam FIFO_LEN = 512;
+  localparam FIFO_LEN = 1024;
 
   // Reset controller
   wire        global_rstn;
@@ -65,7 +65,7 @@ module top (
   reset #(
       .RESET_CYCLES(RESET_CYCLES)
   ) inst (
-      .i_rst_clk (sys_clk_50mhz),
+      .i_rst_clk (global_clk_24mhz),
       .o_rstn    (global_rstn),
       .o_rst_done(global_rst_done)
   );
@@ -216,5 +216,8 @@ module top (
       .vga_green  (vga_green)
   );
 
+  assign debug_led = {
+    fifo1_empty, fifo1_full, fifo1_rden, fifo1_wren, fifo2_empty, fifo2_full, fifo2_rden, fifo2_wren
+  };
 
 endmodule

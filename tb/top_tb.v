@@ -2,7 +2,7 @@
 
 module top_tb ();
 
-  parameter DURATION = 5000000;
+  parameter DURATION = 8000000;
   parameter CLK_PERIOD = 20;  // 20ns = 50MHz
 
   wire        ov7670_rstn;

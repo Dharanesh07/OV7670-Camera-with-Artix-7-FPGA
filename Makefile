@@ -17,6 +17,8 @@ SIM				= top
 SIM_SNAPSHOT	= sim_snapshot
 SIM_DIR 		= sim_output
 STATE_FILE      = waveform.surf.ron
+
+
 SIM_FILES      	= $(TB_DIR)/top_tb.v \
 				  $(TB_DIR)/mt48lc16m16a2.v \
 				  $(TB_DIR)/ov7670_vcd.v \

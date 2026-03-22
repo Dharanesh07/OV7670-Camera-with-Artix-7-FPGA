@@ -72,8 +72,8 @@ module ov7670_frame_grabber (
           end
         end
         FRAME_MSB: begin
-          new_frame  <= 1'b0;
-          px_dataval <= 1'b0;
+          new_frame <= 1'b0;
+          //px_dataval <= 1'b0;
           if (i_hsync) begin
             line_counter <= line_counter + 1'b1;
             if (act_buf) buf_b[15:8] <= i_8b_data;
@@ -102,7 +102,24 @@ module ov7670_frame_grabber (
 
     end
   end
+  /*
+  parameter OUTPUT_FILE = "ov7670_data.txt";
+  integer file;
 
+  initial begin
+    file = $fopen(OUTPUT_FILE, "w");
+    if (!file) begin
+      $display("Error: Could not open output file.");
+      $finish;
+    end
+  end
+
+  reg px_dataval_d;
+  always @(posedge i_pclk) begin
+    px_dataval_d <= px_dataval;
+    if (px_dataval_d) $fdisplay(file, "%h", o_16b_px_data);
+  end
+*/
   assign o_16b_px_data = act_buf ? buf_a : buf_b;
 
 endmodule

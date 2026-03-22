@@ -13,29 +13,44 @@ proc compile {top src_dir output_dir device} {
     # IP
     set_part $device
     
-    read_ip ip/ila_0/ila_0.xci
-    upgrade_ip [get_ips]
-    generate_target all [get_ips]
+    #read_ip ip/ila_0/ila_0.xci
+    #upgrade_ip [get_ips]
+    #generate_target all [get_ips]
     # synthesize if already not synthesized
-    synth_ip [get_ips]
+    #synth_ip [get_ips]
 
     link_design -part $device
     cd $src_dir
-    
-
 
     # Compile any .sv, .v, and .vhd files that exist in the current directory
-    if {[glob -nocomplain *.sv] != ""} {
-        puts "Reading SV files..."
-        read_verilog -sv [glob *.sv]
+    # Find all .sv files recursively
+    set sv_files [glob -nocomplain -type f -- *.sv */*.sv */*/*.sv]
+    if {$sv_files != ""} {
+        puts "Reading SystemVerilog files..."
+        foreach file $sv_files {
+            puts "  $file"
+            read_verilog -sv $file
+        }
     }
-    if {[glob -nocomplain *.v] != ""} {
+    
+    # Find all .v files recursively
+    set v_files [glob -nocomplain -type f -- *.v */*.v */*/*.v]
+    if {$v_files != ""} {
         puts "Reading Verilog files..."
-        read_verilog [glob *.v]
+        foreach file $v_files {
+            puts "  $file"
+            read_verilog $file
+        }
     }
-    if {[glob -nocomplain *.vhd] != ""} {
+    
+    # Find all .vhd files recursively
+    set vhd_files [glob -nocomplain -type f -- *.vhd */*.vhd */*/*.vhd]
+    if {$vhd_files != ""} {
         puts "Reading VHDL files..."
-        read_vhdl [glob *.vhd]
+        foreach file $vhd_files {
+            puts "  $file"
+            read_vhdl $file
+        }
     }
 
     puts "Reading constraints..."
@@ -50,13 +65,12 @@ proc compile {top src_dir output_dir device} {
     cd $original_dir
     # Change to output directory for all output files
 
-
-    cd $output_dir
-    
     puts "Synthesizing design..."
     synth_design -top $top -flatten_hierarchy full 
-    
-    
+
+    cd $output_dir
+
+
     # Configuration voltage settings
     set_property CFGBVS VCCO [current_design]
     set_property CONFIG_VOLTAGE 3.3 [current_design]
@@ -70,9 +84,10 @@ proc compile {top src_dir output_dir device} {
     puts "Routing Design..."
     route_design
 
-    puts "Setting up debug cores..."
-    set debug_file "${top}_debug_nets.ltx"
-    write_debug_probes -force $debug_file 
+
+    # puts "Setting up debug cores..."
+    # set debug_file "${top}_debug_nets.ltx"
+    # write_debug_probes -force $debug_file 
 
     puts "Writing checkpoint"
     write_checkpoint -force $top.dcp
@@ -83,6 +98,35 @@ proc compile {top src_dir output_dir device} {
     puts "All done..."
 
     cd $original_dir
+
+
+    # Comprehensive resource reporting
+    puts "\n=================== DETAILED RESOURCE REPORT ==================="
+
+    # Basic utilization
+    report_utilization -file "${output_dir}/${top}_post_route_util.rpt"
+
+    # Hierarchical utilization
+    report_utilization -hierarchical -hierarchical_depth 5 -file "${output_dir}/${top}_hierarchical_util.rpt"
+
+    # Per-IP utilization
+    #if {[llength [get_ips]] > 0} {
+        #report_utilization -cells [get_ips] -file "${output_dir}/${top}_ip_util.rpt"
+    #}
+
+    # Power estimation
+    report_power -file "${output_dir}/${top}_power_estimation.rpt"
+
+    # Timing summary
+    report_timing_summary -file "${output_dir}/${top}_timing_summary.rpt"
+
+    # Console output
+    puts "exported resource utlization to ${output_dir}"
+    puts "===============================================================\n"
+    
+    exit 
+
+
 }
 
 if {$argc == 4} {

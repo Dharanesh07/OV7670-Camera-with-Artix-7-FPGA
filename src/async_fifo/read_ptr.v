@@ -11,6 +11,7 @@
 // the FIFO is empty. The read pointer and empty flag are updated on each
 // clock cycle, and the read address is calculated from the read pointer.
 
+`timescale 1ns / 10ps
 
 module read_ptr #(
     parameter ADDR_SIZE = 4

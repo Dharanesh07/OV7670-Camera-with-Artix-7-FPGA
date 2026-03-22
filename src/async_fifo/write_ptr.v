@@ -64,7 +64,24 @@ module write_ptr #(
   //The second MSB of the write pointer is inverted compared to the read pointer.
   //The remaining bits of the write pointer are equal to the read pointer.
 
-  assign wr_full_val = (wr_gray_next == {~i_gray_q2_rdptr[ADDR_SIZE:ADDR_SIZE-1], i_gray_q2_rdptr[ADDR_SIZE-2:0]});
+  assign wr_full_val = (wr_gray_next == {~i_gray_q2_rdptr[ADDR_SIZE:ADDR_SIZE-1],i_gray_q2_rdptr[ADDR_SIZE-2:0]});
+
+  // Gray to binary conversion for the synchronized read pointer
+  wire [ADDR_SIZE:0] rd_bin_sync;
+  genvar i;
+  generate
+    for (i = ADDR_SIZE; i > 0; i = i - 1) begin : gray2bin
+      assign rd_bin_sync[i-1] = ^(i_gray_q2_rdptr >> (i - 1));
+    end
+  endgenerate
+  assign rd_bin_sync[ADDR_SIZE] = i_gray_q2_rdptr[ADDR_SIZE];
+
+  // Occupancy = write pointer - read pointer (wraps correctly due to extra bit)
+  wire [ADDR_SIZE:0] fifo_occupancy;
+  assign fifo_occupancy = wr_bin_next - rd_bin_sync;
+
+  // Half-full when occupancy >= half the FIFO depth
+  assign wr_half_full   = fifo_occupancy >= (1 << (ADDR_SIZE - 1));
 
 endmodule
 

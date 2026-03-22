@@ -26,14 +26,14 @@ module ov7670 (
   assign o_ov7670_xclk = i_clk_24mhz;
 
   // 1 clock cycle at 24MHz = 41.66 nS
-  //localparam OV7670_START_DELAY = 300000;  // 60mS
-  //localparam OV7670_RESET_DELAY = 250000;  // 50 mS
-  //localparam OV7670_I2C_DELAY = 330000;
+  localparam OV7670_START_DELAY = 300000;  // 60mS
+  localparam OV7670_RESET_DELAY = 250000;  // 50 mS
+  localparam OV7670_I2C_DELAY = 330000;
 
   // for simulation
-  localparam OV7670_START_DELAY = 1;  // 60mS
-  localparam OV7670_RESET_DELAY = 1;  // 50 mS
-  localparam OV7670_I2C_DELAY = 1;
+  //localparam OV7670_START_DELAY = 1;  // 60mS
+  //localparam OV7670_RESET_DELAY = 1;  // 50 mS
+  //localparam OV7670_I2C_DELAY = 1;
 
   localparam OV7670_RD_ADDR = 8'h43;
   localparam OV7670_WR_ADDR = 8'h42;
@@ -127,18 +127,20 @@ module ov7670 (
   wire [15:0] dbg_pixel_frame;
   wire [11:0] dbg_line_counter;
   wire [ 9:0] dbg_frame_counter;
-
+  wire [15:0] ov_data;
   ov7670_frame_grabber inst_ov7670_frame_grabber (
       .i_pclk       (i_ov7670_pclk),
       .i_hsync      (i_ov7670_hsync),
       .i_vsync      (i_ov7670_vsync),
       .i_8b_data    (i_ov7670_data),
-      .o_16b_px_data(ov7670_fifo_data),
+      .o_16b_px_data(ov_data),
       .new_frame    (ov7670_new_frame),
       .px_dataval   (fifo_wr)
   );
-
+  // ov7670_frame_grabber uses pclk and it arrives only after sensor is
+  // configured
   assign ov7670_fifo_wren = (ov7670_init_done == 1'b1) ? fifo_wr : 1'b0;
+  assign ov7670_fifo_data = (ov7670_init_done == 1'b1) ? ov_data : 0;
 
   always @(posedge i_clk_24mhz) begin
     if (!i_ov7670_rstn) begin
